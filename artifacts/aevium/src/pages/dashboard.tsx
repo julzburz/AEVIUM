@@ -69,11 +69,11 @@ export default function Dashboard() {
   };
 
   const MOCK_PROJECTS = [
-    { id: 1, name: "El último horizonte", type: "novel" as const, status: "active" as const, totalBooks: 1, totalChapters: 12, totalWords: 34820, primaryLanguage: "es", updatedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString() },
-    { id: 2, name: "Crónicas del vacío", type: "saga" as const, status: "active" as const, totalBooks: 3, totalChapters: 41, totalWords: 127450, primaryLanguage: "es", updatedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString() },
-    { id: 3, name: "The Lighthouse Keeper", type: "novel" as const, status: "completed" as const, totalBooks: 1, totalChapters: 22, totalWords: 78300, primaryLanguage: "en", updatedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString() },
-    { id: 4, name: "Fragmentos de luz", type: "articles" as const, status: "active" as const, totalBooks: 1, totalChapters: 8, totalWords: 14200, primaryLanguage: "es", updatedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString() },
-    { id: 5, name: "Nebulosa: Origen", type: "screenplay" as const, status: "archived" as const, totalBooks: 1, totalChapters: 5, totalWords: 9600, primaryLanguage: "es", updatedAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString() },
+    { id: -1, name: "El último horizonte", type: "novel" as const, status: "active" as const, totalBooks: 1, totalChapters: 12, totalWords: 34820, primaryLanguage: "es", updatedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), isMock: true },
+    { id: -2, name: "Crónicas del vacío", type: "saga" as const, status: "active" as const, totalBooks: 3, totalChapters: 41, totalWords: 127450, primaryLanguage: "es", updatedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), isMock: true },
+    { id: -3, name: "The Lighthouse Keeper", type: "novel" as const, status: "completed" as const, totalBooks: 1, totalChapters: 22, totalWords: 78300, primaryLanguage: "en", updatedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), isMock: true },
+    { id: -4, name: "Fragmentos de luz", type: "articles" as const, status: "active" as const, totalBooks: 1, totalChapters: 8, totalWords: 14200, primaryLanguage: "es", updatedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), isMock: true },
+    { id: -5, name: "Nebulosa: Origen", type: "screenplay" as const, status: "archived" as const, totalBooks: 1, totalChapters: 5, totalWords: 9600, primaryLanguage: "es", updatedAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(), isMock: true },
   ];
 
   const MOCK_ACTIVITY = [
@@ -216,64 +216,90 @@ export default function Dashboard() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-          {filteredProjects.map((project) => (
-            <Card
-              key={project.id}
-              className="hover:border-primary/50 transition-colors flex flex-col"
-              data-testid={`card-project-${project.id}`}
-            >
-              <CardHeader className="pb-3">
-                <div className="flex justify-between items-start gap-2">
-                  <div className="flex-1 min-w-0">
-                    <CardTitle className="text-lg mb-1 line-clamp-1">
-                      <Link href={`/projects/${project.id}`} className="hover:underline" data-testid={`link-project-${project.id}`}>
-                        {project.name}
-                      </Link>
-                    </CardTitle>
-                    <CardDescription className="capitalize flex items-center gap-2">
-                      {t(`dashboard.type.${project.type}` as Parameters<typeof t>[0])}
-                    </CardDescription>
+          {filteredProjects.map((project) => {
+            const isMock = 'isMock' in project && project.isMock;
+            return (
+              <Card
+                key={project.id}
+                className={`transition-colors flex flex-col ${isMock ? "opacity-70 border-dashed hover:border-primary/30" : "hover:border-primary/50"}`}
+                data-testid={`card-project-${project.id}`}
+              >
+                <CardHeader className="pb-3">
+                  <div className="flex justify-between items-start gap-2">
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="text-lg mb-1 line-clamp-1">
+                        {isMock ? (
+                          <span className="text-muted-foreground">{project.name}</span>
+                        ) : (
+                          <Link href={`/projects/${project.id}`} className="hover:underline" data-testid={`link-project-${project.id}`}>
+                            {project.name}
+                          </Link>
+                        )}
+                      </CardTitle>
+                      <CardDescription className="capitalize flex items-center gap-2">
+                        {t(`dashboard.type.${project.type}` as Parameters<typeof t>[0])}
+                      </CardDescription>
+                    </div>
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      {isMock && (
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/40 text-primary/70">
+                          Ejemplo
+                        </Badge>
+                      )}
+                      <Badge
+                        variant={statusVariant[project.status] ?? "outline"}
+                        className="text-xs capitalize"
+                        data-testid={`badge-status-${project.id}`}
+                      >
+                        {t(`project.status.${project.status}` as Parameters<typeof t>[0])}
+                      </Badge>
+                    </div>
                   </div>
-                  <Badge
-                    variant={statusVariant[project.status] ?? "outline"}
-                    className="shrink-0 text-xs capitalize"
-                    data-testid={`badge-status-${project.id}`}
-                  >
-                    {t(`project.status.${project.status}` as Parameters<typeof t>[0])}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="flex-1 pb-3">
-                <div className="flex flex-wrap gap-3 text-sm text-muted-foreground mb-3">
-                  <div className="flex items-center gap-1.5" title={t('dashboard.stats.books')}>
-                    <BookOpen className="w-3.5 h-3.5" /> {project.totalBooks}
+                </CardHeader>
+                <CardContent className="flex-1 pb-3">
+                  <div className="flex flex-wrap gap-3 text-sm text-muted-foreground mb-3">
+                    <div className="flex items-center gap-1.5" title={t('dashboard.stats.books')}>
+                      <BookOpen className="w-3.5 h-3.5" /> {project.totalBooks}
+                    </div>
+                    <div className="flex items-center gap-1.5" title={t('dashboard.stats.chapters')}>
+                      <FileText className="w-3.5 h-3.5" /> {project.totalChapters}
+                    </div>
+                    <div className="flex items-center gap-1.5" title={t('dashboard.stats.words')}>
+                      <span className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">
+                        {project.totalWords.toLocaleString()} w
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1.5" title={t('dashboard.stats.chapters')}>
-                    <FileText className="w-3.5 h-3.5" /> {project.totalChapters}
-                  </div>
-                  <div className="flex items-center gap-1.5" title={t('dashboard.stats.words')}>
-                    <span className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">
-                      {project.totalWords.toLocaleString()} w
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Globe className="w-3 h-3" />
+                    <span data-testid={`text-language-${project.id}`}>
+                      {t(`project.language.${project.primaryLanguage}` as Parameters<typeof t>[0])}
                     </span>
                   </div>
-                </div>
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <Globe className="w-3 h-3" />
-                  <span data-testid={`text-language-${project.id}`}>
-                    {t(`project.language.${project.primaryLanguage}` as Parameters<typeof t>[0])}
+                </CardContent>
+                <CardFooter className="flex justify-between border-t mt-auto pt-3 pb-3 bg-muted/10 rounded-b-xl">
+                  <span className="text-xs text-muted-foreground">
+                    {t('dashboard.project.updated')} {formatDistanceToNow(new Date(project.updatedAt), { addSuffix: true, locale })}
                   </span>
-                </div>
-              </CardContent>
-              <CardFooter className="flex justify-between border-t mt-auto pt-3 pb-3 bg-muted/10 rounded-b-xl">
-                <span className="text-xs text-muted-foreground">
-                  {t('dashboard.project.updated')} {formatDistanceToNow(new Date(project.updatedAt), { addSuffix: true, locale })}
-                </span>
-                <Button size="sm" variant="ghost" asChild className="h-7 text-xs" data-testid={`button-open-project-${project.id}`}>
-                  <Link href={`/projects/${project.id}`}>{t('dashboard.project.open')}</Link>
-                </Button>
-              </CardFooter>
-            </Card>
-          ))}
+                  {isMock ? (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 text-xs text-primary/70"
+                      onClick={() => setIsCreating(true)}
+                      data-testid={`button-open-project-${project.id}`}
+                    >
+                      <Plus className="w-3 h-3 mr-1" /> {t('dashboard.create')}
+                    </Button>
+                  ) : (
+                    <Button size="sm" variant="ghost" asChild className="h-7 text-xs" data-testid={`button-open-project-${project.id}`}>
+                      <Link href={`/projects/${project.id}`}>{t('dashboard.project.open')}</Link>
+                    </Button>
+                  )}
+                </CardFooter>
+              </Card>
+            );
+          })}
         </div>
       )}
 
