@@ -1,7 +1,7 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { Link } from "wouter";
 import { useParams } from "wouter";
-import { useGetProject, getGetProjectQueryKey } from "@workspace/api-client-react";
+import { useGetProject, getGetProjectQueryKey, useListScenes, getListScenesQueryKey } from "@workspace/api-client-react";
 import { useI18n } from "@/lib/i18n";
 import { Settings, PanelLeftClose, PanelRightClose, PanelLeft, PanelRight, ChevronRight, BookOpen, FileText, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,14 @@ export default function Editor() {
   const { data: project, isLoading: projectLoading } = useGetProject(id, {
     query: { enabled: !!id, queryKey: getGetProjectQueryKey(id) }
   });
+
+  const { data: chapterScenes = [] } = useListScenes(selectedChapterId ?? 0, {
+    query: { enabled: !!selectedChapterId && !chapterView, queryKey: getListScenesQueryKey(selectedChapterId ?? 0) }
+  });
+
+  const chapterWordCount = useMemo(() => {
+    return chapterScenes.reduce((sum, s) => sum + (s.wordCount ?? 0), 0);
+  }, [chapterScenes]);
 
   const handleSelectScene = useCallback((
     sceneId: number,
@@ -233,10 +241,14 @@ export default function Editor() {
           data-testid="status-bar"
         >
           <div className="flex items-center gap-3">
-            <span data-testid="text-word-count">{wordCount.toLocaleString()} {t('editor.words')}</span>
-            {chapterView && selectedChapterTitle && (
-              <span className="text-muted-foreground/50" data-testid="text-chapter-total-label">
-                {t('editor.chapterFullTitle')}
+            {/* Scene word count */}
+            <span data-testid="text-word-count">
+              {wordCount.toLocaleString()} {t('editor.words')}
+            </span>
+            {/* Chapter total — shown in both scene and chapter view */}
+            {hasScene && !chapterView && chapterWordCount > 0 && (
+              <span className="text-muted-foreground/50" data-testid="text-chapter-word-count">
+                {t('editor.chapterFullTitle')}: {chapterWordCount.toLocaleString()}
               </span>
             )}
           </div>
@@ -290,14 +302,13 @@ export default function Editor() {
         </div>
       )}
 
-      {/* Import dialog */}
-      {selectedBookId && (
-        <ImportDialog
-          bookId={selectedBookId}
-          open={showImport}
-          onClose={() => setShowImport(false)}
-        />
-      )}
+      {/* Import dialog — always available, book selector inside */}
+      <ImportDialog
+        projectId={id}
+        bookId={selectedBookId}
+        open={showImport}
+        onClose={() => setShowImport(false)}
+      />
     </div>
   );
 }

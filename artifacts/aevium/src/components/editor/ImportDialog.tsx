@@ -1,11 +1,13 @@
 import { useState, useRef } from "react";
 import { useI18n } from "@/lib/i18n";
-import { useCreateChapter, useCreateScene, getListChaptersQueryKey, getListScenesQueryKey } from "@workspace/api-client-react";
+import { useCreateChapter, useCreateScene, useListBooks, getListChaptersQueryKey, getListScenesQueryKey, getListBooksQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { FileText, Upload } from "lucide-react";
 
 interface ParsedScene { title: string; content: string }
@@ -81,12 +83,13 @@ function parseFile(text: string): ParsedChapter[] {
 }
 
 interface ImportDialogProps {
-  bookId: number;
+  projectId: number;
+  bookId?: number | null;
   open: boolean;
   onClose: () => void;
 }
 
-export function ImportDialog({ bookId, open, onClose }: ImportDialogProps) {
+export function ImportDialog({ projectId, bookId: initialBookId, open, onClose }: ImportDialogProps) {
   const { t } = useI18n();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -94,9 +97,16 @@ export function ImportDialog({ bookId, open, onClose }: ImportDialogProps) {
   const [parsed, setParsed] = useState<ParsedChapter[]>([]);
   const [fileName, setFileName] = useState("");
   const [importing, setImporting] = useState(false);
+  const [selectedBookId, setSelectedBookId] = useState<number | null>(initialBookId ?? null);
+
+  const { data: books = [] } = useListBooks(projectId, {
+    query: { queryKey: getListBooksQueryKey(projectId) }
+  });
 
   const createChapter = useCreateChapter();
   const createScene = useCreateScene();
+
+  const effectiveBookId = selectedBookId ?? initialBookId ?? null;
 
   const handleFile = (file: File) => {
     setFileName(file.name);
@@ -116,17 +126,17 @@ export function ImportDialog({ bookId, open, onClose }: ImportDialogProps) {
   };
 
   const handleImport = async () => {
-    if (parsed.length === 0) return;
+    if (parsed.length === 0 || !effectiveBookId) return;
     setImporting(true);
     try {
       for (const chapter of parsed) {
         const newChapter = await new Promise<{ id: number }>((resolve, reject) => {
-          createChapter.mutate({ bookId, data: { title: chapter.title } }, {
+          createChapter.mutate({ bookId: effectiveBookId, data: { title: chapter.title } }, {
             onSuccess: resolve,
             onError: reject,
           });
         });
-        await queryClient.invalidateQueries({ queryKey: getListChaptersQueryKey(bookId) });
+        await queryClient.invalidateQueries({ queryKey: getListChaptersQueryKey(effectiveBookId) });
 
         for (const scene of chapter.scenes) {
           await new Promise<void>((resolve, reject) => {
@@ -160,6 +170,26 @@ export function ImportDialog({ bookId, open, onClose }: ImportDialogProps) {
           <DialogTitle>{t('editor.import.title')}</DialogTitle>
           <DialogDescription>{t('editor.import.desc')}</DialogDescription>
         </DialogHeader>
+
+        {/* Book selector — shown when no book is pre-selected */}
+        {books.length > 0 && (
+          <div className="space-y-1">
+            <Label className="text-xs">{t('editor.import.targetBook')}</Label>
+            <Select
+              value={effectiveBookId?.toString() ?? ""}
+              onValueChange={(v) => setSelectedBookId(Number(v))}
+            >
+              <SelectTrigger className="h-8 text-sm" data-testid="select-import-book">
+                <SelectValue placeholder={t('editor.import.selectBook')} />
+              </SelectTrigger>
+              <SelectContent>
+                {books.map((b) => (
+                  <SelectItem key={b.id} value={b.id.toString()} className="text-sm">{b.title}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         <div
           className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
@@ -215,7 +245,11 @@ export function ImportDialog({ bookId, open, onClose }: ImportDialogProps) {
 
         <DialogFooter>
           <Button variant="outline" onClick={() => { setParsed([]); setFileName(""); onClose(); }}>{t('form.cancel')}</Button>
-          <Button onClick={handleImport} disabled={parsed.length === 0 || importing} data-testid="button-confirm-import">
+          <Button
+            onClick={handleImport}
+            disabled={parsed.length === 0 || importing || !effectiveBookId}
+            data-testid="button-confirm-import"
+          >
             {importing ? t('editor.import.importing') : t('editor.import.confirm')}
           </Button>
         </DialogFooter>

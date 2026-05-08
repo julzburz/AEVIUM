@@ -59,6 +59,7 @@ function ChapterRow({
   onRename,
   onDeleteChapter,
   onMoveChapter,
+  onDuplicateChapter,
   t,
   toast,
   queryClient,
@@ -72,6 +73,7 @@ function ChapterRow({
   onRename: (target: RenameTarget) => void;
   onDeleteChapter: (bookId: number, chapterId: number, e: React.MouseEvent) => void;
   onMoveChapter: (chapterId: number, dir: "up" | "down") => void;
+  onDuplicateChapter: (chap: { id: number; title: string }, e: React.MouseEvent) => void;
   t: (key: Parameters<ReturnType<typeof useI18n>["t"]>[0]) => string;
   toast: ReturnType<typeof useToast>["toast"];
   queryClient: ReturnType<typeof useQueryClient>;
@@ -185,6 +187,9 @@ function ChapterRow({
               </DropdownMenuItem>
               <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setShowNewScene(true); }} data-testid={`button-add-scene-${chapter.id}`}>
                 <Plus className="w-3.5 h-3.5 mr-2" /> {t('editor.newScene')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={(e) => onDuplicateChapter(chapter, e)} data-testid={`button-duplicate-chapter-${chapter.id}`}>
+                <Copy className="w-3.5 h-3.5 mr-2" /> {t('editor.duplicateChapter')}
               </DropdownMenuItem>
               <DropdownMenuItem className="text-destructive" onClick={(e) => onDeleteChapter(bookId, chapter.id, e)} data-testid={`button-delete-chapter-${chapter.id}`}>
                 <Trash2 className="w-3.5 h-3.5 mr-2" /> {t('editor.deleteChapter')}
@@ -402,6 +407,7 @@ function BookRow({
               onRename={onRename}
               onDeleteChapter={handleDeleteChapter}
               onMoveChapter={handleMoveChapter}
+              onDuplicateChapter={handleDuplicateChapter}
               t={t}
               toast={toast}
               queryClient={queryClient}
