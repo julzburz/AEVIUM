@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   useListTimelineEvents, getListTimelineEventsQueryKey,
   useCreateTimelineEvent, useUpdateTimelineEvent, useDeleteTimelineEvent,
+  useListCharacters, getListCharactersQueryKey,
 } from "@workspace/api-client-react";
 import type { TimelineEvent, CreateTimelineEventBodyEventType } from "@workspace/api-client-react";
 import { useI18n } from "@/lib/i18n";
@@ -32,36 +33,58 @@ const EVENT_TYPE_DOT: Record<string, string> = {
 
 interface TimelinePanelProps { projectId: number }
 
+interface EventForm {
+  description: string;
+  dateLabel: string;
+  eventType: CreateTimelineEventBodyEventType;
+  orderIndex: number;
+  characterId: number | null;
+}
+
 export function TimelinePanel({ projectId }: TimelinePanelProps) {
   const { t } = useI18n();
   const { toast } = useToast();
   const qc = useQueryClient();
   const { data: events = [] } = useListTimelineEvents(projectId, { query: { queryKey: getListTimelineEventsQueryKey(projectId) } });
+  const { data: characters = [] } = useListCharacters(projectId, { query: { queryKey: getListCharactersQueryKey(projectId) } });
   const create = useCreateTimelineEvent();
   const update = useUpdateTimelineEvent();
   const del = useDeleteTimelineEvent();
 
   const [editing, setEditing] = useState<TimelineEvent | null | "new">(null);
-  const [form, setForm] = useState({ description: "", dateLabel: "", eventType: "other" as CreateTimelineEventBodyEventType, orderIndex: 0 });
+  const [form, setForm] = useState<EventForm>({ description: "", dateLabel: "", eventType: "other", orderIndex: 0, characterId: null });
 
   const openNew = () => {
-    setForm({ description: "", dateLabel: "", eventType: "other", orderIndex: events.length });
+    setForm({ description: "", dateLabel: "", eventType: "other", orderIndex: events.length, characterId: null });
     setEditing("new");
   };
   const openEdit = (ev: TimelineEvent) => {
-    setForm({ description: ev.description, dateLabel: ev.dateLabel ?? "", eventType: ev.eventType as CreateTimelineEventBodyEventType, orderIndex: ev.orderIndex });
+    setForm({
+      description: ev.description,
+      dateLabel: ev.dateLabel ?? "",
+      eventType: ev.eventType as CreateTimelineEventBodyEventType,
+      orderIndex: ev.orderIndex,
+      characterId: ev.characterId ?? null,
+    });
     setEditing(ev);
   };
 
   const save = () => {
     if (!form.description.trim()) return;
+    const payload = {
+      description: form.description,
+      dateLabel: form.dateLabel || null,
+      eventType: form.eventType,
+      orderIndex: form.orderIndex,
+      characterId: form.characterId,
+    };
     if (editing === "new") {
-      create.mutate({ projectId, data: { description: form.description, dateLabel: form.dateLabel || null, eventType: form.eventType, orderIndex: form.orderIndex } }, {
+      create.mutate({ projectId, data: payload }, {
         onSuccess: () => { qc.invalidateQueries({ queryKey: getListTimelineEventsQueryKey(projectId) }); setEditing(null); },
         onError: () => toast({ title: t('editor.newEvent'), variant: "destructive" }),
       });
     } else if (editing) {
-      update.mutate({ projectId, id: (editing as TimelineEvent).id, data: { description: form.description, dateLabel: form.dateLabel || null, eventType: form.eventType, orderIndex: form.orderIndex } }, {
+      update.mutate({ projectId, id: (editing as TimelineEvent).id, data: payload }, {
         onSuccess: () => { qc.invalidateQueries({ queryKey: getListTimelineEventsQueryKey(projectId) }); setEditing(null); },
         onError: () => toast({ title: t('editor.editEvent'), variant: "destructive" }),
       });
@@ -76,6 +99,7 @@ export function TimelinePanel({ projectId }: TimelinePanelProps) {
   };
 
   const sorted = [...events].sort((a, b) => a.orderIndex - b.orderIndex);
+  const charMap = Object.fromEntries(characters.map(c => [c.id, c.name]));
 
   return (
     <div data-testid="panel-timeline">
@@ -104,9 +128,14 @@ export function TimelinePanel({ projectId }: TimelinePanelProps) {
                         <p className="text-[10px] text-primary/70 font-mono mb-0.5">{ev.dateLabel}</p>
                       )}
                       <p className="text-foreground">{ev.description}</p>
-                      <p className="text-muted-foreground text-[10px] mt-0.5 capitalize">
-                        {t(`editor.eventType.${ev.eventType}` as Parameters<typeof t>[0])}
-                      </p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <p className="text-muted-foreground text-[10px] capitalize">
+                          {t(`editor.eventType.${ev.eventType}` as Parameters<typeof t>[0])}
+                        </p>
+                        {ev.characterId && charMap[ev.characterId] && (
+                          <p className="text-muted-foreground text-[10px]">· {charMap[ev.characterId]}</p>
+                        )}
+                      </div>
                     </div>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -146,9 +175,21 @@ export function TimelinePanel({ projectId }: TimelinePanelProps) {
               <Label className="text-xs">{t('editor.timeline.description')}</Label>
               <Textarea rows={3} className="text-xs resize-none" value={form.description} onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))} data-testid="input-event-description" />
             </div>
+            {characters.length > 0 && (
+              <div className="space-y-1">
+                <Label className="text-xs">{t('editor.timeline.involvedCharacter')}</Label>
+                <Select value={form.characterId?.toString() ?? "none"} onValueChange={(v) => setForm(f => ({ ...f, characterId: v === "none" ? null : Number(v) }))}>
+                  <SelectTrigger className="h-7 text-xs" data-testid="select-event-character"><SelectValue placeholder={t('editor.timeline.noCharacter')} /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none" className="text-xs">{t('editor.timeline.noCharacter')}</SelectItem>
+                    {characters.map(c => <SelectItem key={c.id} value={c.id.toString()} className="text-xs">{c.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="space-y-1">
-              <Label className="text-xs">Orden</Label>
-              <Input className="h-7 text-xs" type="number" value={form.orderIndex} onChange={(e) => setForm(f => ({ ...f, orderIndex: Number(e.target.value) }))} />
+              <Label className="text-xs">{t('editor.timeline.order')}</Label>
+              <Input className="h-7 text-xs" type="number" value={form.orderIndex} onChange={(e) => setForm(f => ({ ...f, orderIndex: Number(e.target.value) }))} data-testid="input-event-order" />
             </div>
           </div>
           <DialogFooter>

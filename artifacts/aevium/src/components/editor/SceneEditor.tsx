@@ -15,12 +15,13 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useEditor, EditorContent } from "@tiptap/react";
+import { BubbleMenu } from "@tiptap/react/menus";
 import StarterKit from "@tiptap/starter-kit";
 import Typography from "@tiptap/extension-typography";
 import Placeholder from "@tiptap/extension-placeholder";
 import CharacterCount from "@tiptap/extension-character-count";
 import { customFetch } from "@workspace/api-client-react";
-import { Bold, Italic, List, ListOrdered, Quote, Minus, Undo, Redo, History } from "lucide-react";
+import { Bold, Italic, Quote, History, List, ListOrdered, Minus, Undo, Redo, Wand2 } from "lucide-react";
 
 type SceneStatus = "draft" | "in_review" | "ready" | "blocked" | "needs_rewrite" | "needs_continuity";
 
@@ -38,6 +39,7 @@ interface SceneEditorProps {
   chapterId: number;
   projectId: number;
   onWordCountChange: (count: number) => void;
+  onSaveStatusChange?: (status: "idle" | "saving" | "saved") => void;
 }
 
 interface SceneVersion {
@@ -134,7 +136,7 @@ function EditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> }) {
   );
 }
 
-export function SceneEditor({ sceneId, chapterId, projectId, onWordCountChange }: SceneEditorProps) {
+export function SceneEditor({ sceneId, chapterId, projectId, onWordCountChange, onSaveStatusChange }: SceneEditorProps) {
   const { t } = useI18n();
   const queryClient = useQueryClient();
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
@@ -162,6 +164,11 @@ export function SceneEditor({ sceneId, chapterId, projectId, onWordCountChange }
   const [internalDate, setInternalDate] = useState("");
   const [narrativeGoal, setNarrativeGoal] = useState("");
 
+  const updateSaveStatus = useCallback((s: "idle" | "saving" | "saved") => {
+    setSaveStatus(s);
+    onSaveStatusChange?.(s);
+  }, [onSaveStatusChange]);
+
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -177,7 +184,7 @@ export function SceneEditor({ sceneId, chapterId, projectId, onWordCountChange }
     },
     editorProps: {
       attributes: {
-        class: "outline-none min-h-[400px] font-serif text-base leading-relaxed text-foreground prose prose-invert max-w-none",
+        class: "outline-none min-h-[400px] font-serif text-base leading-relaxed text-foreground prose dark:prose-invert max-w-none",
         "data-testid": "tiptap-editor",
       },
     },
@@ -203,7 +210,7 @@ export function SceneEditor({ sceneId, chapterId, projectId, onWordCountChange }
     if (!editor) return;
     const html = editor.getHTML();
     const words = editor.getText().trim().split(/\s+/).filter(Boolean).length;
-    setSaveStatus("saving");
+    updateSaveStatus("saving");
     updateScene.mutate(
       {
         chapterId, id: sceneId,
@@ -221,14 +228,14 @@ export function SceneEditor({ sceneId, chapterId, projectId, onWordCountChange }
       {
         onSuccess: () => {
           lastContent.current = html;
-          setSaveStatus("saved");
+          updateSaveStatus("saved");
           queryClient.invalidateQueries({ queryKey: getGetSceneQueryKey(chapterId, sceneId) });
-          setTimeout(() => setSaveStatus("idle"), 2000);
+          setTimeout(() => updateSaveStatus("idle"), 2000);
         },
-        onError: () => setSaveStatus("idle"),
+        onError: () => updateSaveStatus("idle"),
       }
     );
-  }, [editor, chapterId, sceneId, sceneTitle, sceneStatus, povId, locId, internalDate, narrativeGoal, updateScene, queryClient]);
+  }, [editor, chapterId, sceneId, sceneTitle, sceneStatus, povId, locId, internalDate, narrativeGoal, updateScene, queryClient, updateSaveStatus]);
 
   const schedule = useCallback(() => {
     if (saveTimer.current) clearTimeout(saveTimer.current);
@@ -321,17 +328,50 @@ export function SceneEditor({ sceneId, chapterId, projectId, onWordCountChange }
         <Button variant="ghost" size="sm" className="h-6 text-xs px-2 text-muted-foreground shrink-0" onClick={() => setShowVersions(true)} data-testid="button-view-versions">
           <History className="w-3 h-3 mr-1" />{t('editor.versions')}
         </Button>
-
-        {saveStatus !== "idle" && (
-          <span className="text-xs text-muted-foreground shrink-0" data-testid="status-save">
-            {saveStatus === "saving" ? t('editor.saving') : t('editor.saved')}
-          </span>
-        )}
       </div>
 
       <EditorToolbar editor={editor} />
 
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto relative">
+        {editor && (
+          <BubbleMenu
+            editor={editor}
+            className="flex items-center gap-0.5 bg-popover border rounded-md shadow-lg p-1"
+            data-testid="bubble-menu"
+          >
+            <button
+              className={`h-6 w-6 flex items-center justify-center rounded text-xs transition-colors ${editor.isActive("bold") ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted/50"}`}
+              onClick={() => editor.chain().focus().toggleBold().run()}
+              data-testid="bubble-bold"
+            >
+              <Bold className="w-3 h-3" />
+            </button>
+            <button
+              className={`h-6 w-6 flex items-center justify-center rounded text-xs transition-colors ${editor.isActive("italic") ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted/50"}`}
+              onClick={() => editor.chain().focus().toggleItalic().run()}
+              data-testid="bubble-italic"
+            >
+              <Italic className="w-3 h-3" />
+            </button>
+            <button
+              className={`h-6 w-6 flex items-center justify-center rounded text-xs transition-colors ${editor.isActive("blockquote") ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-muted/50"}`}
+              onClick={() => editor.chain().focus().toggleBlockquote().run()}
+              data-testid="bubble-quote"
+            >
+              <Quote className="w-3 h-3" />
+            </button>
+            <span className="w-px h-3.5 bg-border mx-0.5" />
+            <button
+              className="h-6 px-1.5 flex items-center justify-center rounded text-xs text-primary/80 hover:bg-primary/10 transition-colors gap-1"
+              onClick={() => {}}
+              title={t('editor.aiAssist')}
+              data-testid="bubble-ai"
+            >
+              <Wand2 className="w-3 h-3" />
+              <span className="text-[10px] font-medium">IA</span>
+            </button>
+          </BubbleMenu>
+        )}
         <div className="max-w-2xl mx-auto w-full px-8 md:px-12 lg:px-16 py-10">
           <EditorContent editor={editor} />
         </div>

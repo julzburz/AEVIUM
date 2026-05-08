@@ -1,14 +1,11 @@
 import { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import {
-  useListBooks, getListBooksQueryKey,
-  useListChapters, getListChaptersQueryKey,
-  useListScenes, getListScenesQueryKey,
-  useCreateBook, useDeleteBook, useUpdateBook,
-  useCreateChapter, useDeleteChapter, useUpdateChapter,
-  useCreateScene, useDeleteScene, useUpdateScene,
+  useListBooks, getListBooksQueryKey, useCreateBook, useDeleteBook, useUpdateBook,
+  useListChapters, getListChaptersQueryKey, useCreateChapter, useDeleteChapter, useUpdateChapter,
+  useListScenes, getListScenesQueryKey, useCreateScene, useDeleteScene, useUpdateScene,
 } from "@workspace/api-client-react";
 import { useI18n } from "@/lib/i18n";
+import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,8 +16,25 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  ChevronRight, ChevronDown, BookOpen, FileText, Plus, MoreHorizontal, Trash2, Pencil,
+  ChevronRight, ChevronDown, FileText, BookOpen,
+  Plus, Pencil, Trash2, MoreHorizontal, Copy, ArrowUp, ArrowDown,
 } from "lucide-react";
+
+const sceneStatusDot: Record<string, string> = {
+  draft: "bg-muted-foreground/40",
+  in_review: "bg-yellow-400",
+  ready: "bg-green-500",
+  blocked: "bg-destructive",
+  needs_rewrite: "bg-orange-400",
+  needs_continuity: "bg-blue-400",
+};
+
+type SceneStatus = "draft" | "in_review" | "ready" | "blocked";
+
+type RenameTarget =
+  | { kind: "book";    id: number; projectId: number;  currentTitle: string }
+  | { kind: "chapter"; id: number; bookId: number;     currentTitle: string }
+  | { kind: "scene";   id: number; chapterId: number;  currentTitle: string };
 
 interface StructureTreeProps {
   projectId: number;
@@ -35,39 +49,29 @@ interface StructureTreeProps {
   ) => void;
 }
 
-type SceneStatus = "draft" | "in_review" | "ready" | "blocked";
-
-const sceneStatusDot: Record<SceneStatus, string> = {
-  draft:     "bg-muted-foreground/40",
-  in_review: "bg-yellow-400",
-  ready:     "bg-green-500",
-  blocked:   "bg-destructive",
-};
-
-type RenameTarget =
-  | { kind: "book";    id: number; projectId: number;  currentTitle: string }
-  | { kind: "chapter"; id: number; bookId: number;     currentTitle: string }
-  | { kind: "scene";   id: number; chapterId: number;  currentTitle: string };
-
 function ChapterRow({
   chapter,
   bookId,
   book,
+  chapterList,
   selectedSceneId,
   onSelectScene,
   onRename,
   onDeleteChapter,
+  onMoveChapter,
   t,
   toast,
   queryClient,
 }: {
-  chapter: { id: number; title: string };
+  chapter: { id: number; title: string; position: number };
+  chapterList: { id: number; title: string; position: number }[];
   bookId: number;
   book: { id: number; title: string };
   selectedSceneId: number | null;
   onSelectScene: StructureTreeProps["onSelectScene"];
   onRename: (target: RenameTarget) => void;
   onDeleteChapter: (bookId: number, chapterId: number, e: React.MouseEvent) => void;
+  onMoveChapter: (chapterId: number, dir: "up" | "down") => void;
   t: (key: Parameters<ReturnType<typeof useI18n>["t"]>[0]) => string;
   toast: ReturnType<typeof useToast>["toast"];
   queryClient: ReturnType<typeof useQueryClient>;
@@ -83,6 +87,11 @@ function ChapterRow({
   const createScene = useCreateScene();
   const deleteScene = useDeleteScene();
   const updateScene = useUpdateScene();
+
+  const sorted = [...scenes].sort((a, b) => a.position - b.position);
+  const chapterIdx = chapterList.findIndex(c => c.id === chapter.id);
+  const canMoveUp = chapterIdx > 0;
+  const canMoveDown = chapterIdx < chapterList.length - 1;
 
   const handleCreateScene = () => {
     if (!newSceneTitle.trim()) return;
@@ -103,9 +112,37 @@ function ChapterRow({
     });
   };
 
+  const handleDuplicateScene = (scene: { id: number; title: string }, e: React.MouseEvent) => {
+    e.stopPropagation();
+    createScene.mutate(
+      { chapterId: chapter.id, data: { title: `${scene.title} (${t('editor.copy')})` } },
+      {
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: getListScenesQueryKey(chapter.id) }),
+        onError: () => toast({ title: t('editor.newScene'), variant: "destructive" }),
+      }
+    );
+  };
+
   const handleRenameScene = (scene: { id: number; title: string }, e: React.MouseEvent) => {
     e.stopPropagation();
     onRename({ kind: "scene", id: scene.id, chapterId: chapter.id, currentTitle: scene.title });
+  };
+
+  const handleMoveScene = (scene: { id: number; position: number }, dir: "up" | "down", e: React.MouseEvent) => {
+    e.stopPropagation();
+    const idx = sorted.findIndex(s => s.id === scene.id);
+    const swapIdx = dir === "up" ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= sorted.length) return;
+    const other = sorted[swapIdx];
+    const newPos = other.position;
+    const otherNewPos = scene.position;
+    updateScene.mutate({ chapterId: chapter.id, id: scene.id, data: { position: newPos } }, {
+      onSuccess: () => {
+        updateScene.mutate({ chapterId: chapter.id, id: other.id, data: { position: otherNewPos } }, {
+          onSuccess: () => queryClient.invalidateQueries({ queryKey: getListScenesQueryKey(chapter.id) }),
+        });
+      },
+    });
   };
 
   return (
@@ -119,7 +156,23 @@ function ChapterRow({
           {expanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
         </button>
         <span className="flex-1 truncate text-xs text-muted-foreground">{chapter.title}</span>
-        <div className="opacity-0 group-hover:opacity-100">
+        <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5">
+          <button
+            className="w-4 h-4 flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30"
+            disabled={!canMoveUp}
+            onClick={(e) => { e.stopPropagation(); onMoveChapter(chapter.id, "up"); }}
+            data-testid={`button-chapter-up-${chapter.id}`}
+          >
+            <ArrowUp className="w-2.5 h-2.5" />
+          </button>
+          <button
+            className="w-4 h-4 flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30"
+            disabled={!canMoveDown}
+            onClick={(e) => { e.stopPropagation(); onMoveChapter(chapter.id, "down"); }}
+            data-testid={`button-chapter-down-${chapter.id}`}
+          >
+            <ArrowDown className="w-2.5 h-2.5" />
+          </button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="w-5 h-5" onClick={(e) => e.stopPropagation()} data-testid={`button-chapter-menu-${chapter.id}`}>
@@ -143,11 +196,13 @@ function ChapterRow({
 
       {expanded && (
         <div className="ml-4 space-y-0.5">
-          {scenes.length === 0 ? (
+          {sorted.length === 0 ? (
             <p className="px-2 py-1 text-muted-foreground text-xs">{t('editor.noScenes')}</p>
-          ) : scenes.map((scene) => {
+          ) : sorted.map((scene, idx) => {
             const statusKey = (scene.status ?? "draft") as SceneStatus;
             const dotClass = sceneStatusDot[statusKey] ?? sceneStatusDot.draft;
+            const canUp = idx > 0;
+            const canDown = idx < sorted.length - 1;
             return (
               <div
                 key={scene.id}
@@ -160,7 +215,31 @@ function ChapterRow({
                 <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotClass}`} title={t(`editor.${statusKey}` as Parameters<typeof t>[0])} />
                 <FileText className="w-3 h-3 shrink-0" />
                 <span className="flex-1 truncate text-xs">{scene.title}</span>
+                {(scene.wordCount ?? 0) > 0 && (
+                  <span className="text-[10px] text-muted-foreground/50 shrink-0 mr-0.5">
+                    {(scene.wordCount ?? 0).toLocaleString()}
+                  </span>
+                )}
                 <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5">
+                  <button
+                    className="w-4 h-4 flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30"
+                    disabled={!canUp}
+                    onClick={(e) => handleMoveScene(scene, "up", e)}
+                    data-testid={`button-scene-up-${scene.id}`}
+                  >
+                    <ArrowUp className="w-2.5 h-2.5" />
+                  </button>
+                  <button
+                    className="w-4 h-4 flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30"
+                    disabled={!canDown}
+                    onClick={(e) => handleMoveScene(scene, "down", e)}
+                    data-testid={`button-scene-down-${scene.id}`}
+                  >
+                    <ArrowDown className="w-2.5 h-2.5" />
+                  </button>
+                  <Button variant="ghost" size="icon" className="w-5 h-5" onClick={(e) => handleDuplicateScene(scene, e)} data-testid={`button-duplicate-scene-${scene.id}`}>
+                    <Copy className="w-2.5 h-2.5" />
+                  </Button>
                   <Button variant="ghost" size="icon" className="w-5 h-5" onClick={(e) => handleRenameScene(scene, e)} data-testid={`button-rename-scene-${scene.id}`}>
                     <Pencil className="w-2.5 h-2.5" />
                   </Button>
@@ -222,6 +301,9 @@ function BookRow({
 
   const createChapter = useCreateChapter();
   const deleteChapter = useDeleteChapter();
+  const updateChapter = useUpdateChapter();
+
+  const sorted = [...chapters].sort((a, b) => a.position - b.position);
 
   const handleCreateChapter = () => {
     if (!newChapterTitle.trim()) return;
@@ -240,6 +322,34 @@ function BookRow({
       onSuccess: () => queryClient.invalidateQueries({ queryKey: getListChaptersQueryKey(bookId) }),
       onError: () => toast({ title: t('editor.deleteChapter'), variant: "destructive" }),
     });
+  };
+
+  const handleMoveChapter = (chapterId: number, dir: "up" | "down") => {
+    const idx = sorted.findIndex(c => c.id === chapterId);
+    const swapIdx = dir === "up" ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= sorted.length) return;
+    const current = sorted[idx];
+    const other = sorted[swapIdx];
+    const newPos = other.position;
+    const otherNewPos = current.position;
+    updateChapter.mutate({ bookId: book.id, id: current.id, data: { position: newPos } }, {
+      onSuccess: () => {
+        updateChapter.mutate({ bookId: book.id, id: other.id, data: { position: otherNewPos } }, {
+          onSuccess: () => queryClient.invalidateQueries({ queryKey: getListChaptersQueryKey(book.id) }),
+        });
+      },
+    });
+  };
+
+  const handleDuplicateChapter = (chap: { id: number; title: string }, e: React.MouseEvent) => {
+    e.stopPropagation();
+    createChapter.mutate(
+      { bookId: book.id, data: { title: `${chap.title} (${t('editor.copy')})` } },
+      {
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: getListChaptersQueryKey(book.id) }),
+        onError: () => toast({ title: t('editor.newChapter'), variant: "destructive" }),
+      }
+    );
   };
 
   return (
@@ -278,18 +388,20 @@ function BookRow({
 
       {expanded && (
         <div className="ml-5 space-y-0.5">
-          {chapters.length === 0 ? (
+          {sorted.length === 0 ? (
             <p className="px-2 py-1 text-muted-foreground text-xs">{t('editor.noChapters')}</p>
-          ) : chapters.map((chapter) => (
+          ) : sorted.map((chapter) => (
             <ChapterRow
               key={chapter.id}
               chapter={chapter}
+              chapterList={sorted}
               bookId={book.id}
               book={book}
               selectedSceneId={selectedSceneId}
               onSelectScene={onSelectScene}
               onRename={onRename}
               onDeleteChapter={handleDeleteChapter}
+              onMoveChapter={handleMoveChapter}
               t={t}
               toast={toast}
               queryClient={queryClient}

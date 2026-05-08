@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+import DOMPurify from "dompurify";
 import { useListScenes, getListScenesQueryKey } from "@workspace/api-client-react";
 import { useI18n } from "@/lib/i18n";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -6,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 interface ChapterViewProps {
   chapterId: number;
   chapterTitle: string;
+  onWordCountChange?: (count: number) => void;
 }
 
 function countWords(html: string): number {
@@ -13,17 +16,24 @@ function countWords(html: string): number {
   return text ? text.split(" ").length : 0;
 }
 
-function stripHtml(html: string): string {
-  return html.replace(/<br\s*\/?>/gi, "\n").replace(/<\/p>/gi, "\n\n").replace(/<[^>]+>/g, "").trim();
+const ALLOWED_TAGS = ["p","br","strong","em","b","i","u","s","ul","ol","li","blockquote","h1","h2","h3","h4","hr","span","a"];
+const ALLOWED_ATTR = ["class","href","target","rel"];
+
+function safeHtml(raw: string): string {
+  return DOMPurify.sanitize(raw, { ALLOWED_TAGS, ALLOWED_ATTR });
 }
 
-export function ChapterView({ chapterId, chapterTitle }: ChapterViewProps) {
+export function ChapterView({ chapterId, chapterTitle, onWordCountChange }: ChapterViewProps) {
   const { t } = useI18n();
   const { data: scenes = [], isLoading } = useListScenes(chapterId, {
     query: { queryKey: getListScenesQueryKey(chapterId) }
   });
 
   const totalWords = scenes.reduce((acc, s) => acc + countWords(s.content ?? ""), 0);
+
+  useEffect(() => {
+    if (onWordCountChange) onWordCountChange(totalWords);
+  }, [totalWords, onWordCountChange]);
 
   if (isLoading) {
     return (
@@ -64,7 +74,7 @@ export function ChapterView({ chapterId, chapterTitle }: ChapterViewProps) {
                 </div>
                 <div
                   className="font-serif text-base leading-relaxed text-foreground prose dark:prose-invert max-w-none"
-                  dangerouslySetInnerHTML={{ __html: scene.content ?? `<p class="text-muted-foreground italic">${t('editor.noScenes')}</p>` }}
+                  dangerouslySetInnerHTML={{ __html: safeHtml(scene.content ?? "") }}
                 />
                 {idx < scenes.length - 1 && (
                   <div className="mt-8 flex items-center gap-4 text-muted-foreground/30">

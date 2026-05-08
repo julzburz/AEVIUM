@@ -25,6 +25,7 @@ export default function Editor() {
   const [selectedChapterTitle, setSelectedChapterTitle] = useState<string | null>(null);
   const [selectedSceneTitle, setSelectedSceneTitle] = useState<string | null>(null);
   const [wordCount, setWordCount] = useState(0);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [chapterView, setChapterView] = useState(false);
   const [showImport, setShowImport] = useState(false);
 
@@ -38,18 +39,25 @@ export default function Editor() {
     bookTitle: string,
     chapterTitle: string,
     sceneTitle: string,
-    bookId?: number,
+    bookId: number,
   ) => {
     setSelectedSceneId(sceneId);
     setSelectedChapterId(chapterId);
     setSelectedBookTitle(bookTitle);
     setSelectedChapterTitle(chapterTitle);
     setSelectedSceneTitle(sceneTitle);
-    if (bookId !== undefined) setSelectedBookId(bookId);
+    setSelectedBookId(bookId);
+    setChapterView(false);
+    setSaveStatus("idle");
+    setWordCount(0);
   }, []);
 
   const handleWordCountChange = useCallback((count: number) => {
     setWordCount(count);
+  }, []);
+
+  const handleSaveStatusChange = useCallback((s: "idle" | "saving" | "saved") => {
+    setSaveStatus(s);
   }, []);
 
   if (projectLoading) {
@@ -177,7 +185,7 @@ export default function Editor() {
               variant={chapterView ? "secondary" : "ghost"}
               size="sm"
               className="h-7 text-xs px-2 shrink-0 gap-1"
-              onClick={() => setChapterView(!chapterView)}
+              onClick={() => { setChapterView(!chapterView); setWordCount(0); }}
               data-testid="button-toggle-chapter-view"
             >
               {chapterView ? (
@@ -204,6 +212,7 @@ export default function Editor() {
             <ChapterView
               chapterId={selectedChapterId!}
               chapterTitle={selectedChapterTitle}
+              onWordCountChange={handleWordCountChange}
             />
           )}
 
@@ -213,6 +222,7 @@ export default function Editor() {
               chapterId={selectedChapterId!}
               projectId={id}
               onWordCountChange={handleWordCountChange}
+              onSaveStatusChange={handleSaveStatusChange}
             />
           )}
         </div>
@@ -222,17 +232,29 @@ export default function Editor() {
           className="h-8 border-t flex items-center justify-between px-4 shrink-0 text-xs text-muted-foreground bg-muted/20"
           data-testid="status-bar"
         >
-          <span data-testid="text-word-count">{wordCount.toLocaleString()} {t('editor.words')}</span>
-          {selectedSceneId && !chapterView && (
-            <span className="text-muted-foreground/60" data-testid="text-scene-status">
-              {selectedSceneTitle}
-            </span>
-          )}
-          {chapterView && selectedChapterTitle && (
-            <span className="text-muted-foreground/60" data-testid="text-chapter-view-mode">
-              {t('editor.chapterFullTitle')}
-            </span>
-          )}
+          <div className="flex items-center gap-3">
+            <span data-testid="text-word-count">{wordCount.toLocaleString()} {t('editor.words')}</span>
+            {chapterView && selectedChapterTitle && (
+              <span className="text-muted-foreground/50" data-testid="text-chapter-total-label">
+                {t('editor.chapterFullTitle')}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-3">
+            {!chapterView && saveStatus !== "idle" && (
+              <span
+                className={`shrink-0 ${saveStatus === "saving" ? "text-muted-foreground" : "text-green-600 dark:text-green-400"}`}
+                data-testid="status-save-bar"
+              >
+                {saveStatus === "saving" ? t('editor.saving') : t('editor.saved')}
+              </span>
+            )}
+            {selectedSceneId && !chapterView && selectedSceneTitle && (
+              <span className="text-muted-foreground/60 truncate max-w-[180px]" data-testid="text-scene-status">
+                {selectedSceneTitle}
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
