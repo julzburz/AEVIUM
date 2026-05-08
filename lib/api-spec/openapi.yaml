@@ -3,20 +3,42 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: AEVIUM AI Writing Assistant API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: projects
+    description: Writing projects
+  - name: books
+    description: Books within projects
+  - name: chapters
+    description: Chapters within books
+  - name: scenes
+    description: Scenes within chapters
+  - name: characters
+    description: Characters in projects
+  - name: locations
+    description: Locations in projects
+  - name: worldRules
+    description: World-building rules
+  - name: memoryItems
+    description: Narrative memory items
+  - name: timelineEvents
+    description: Timeline events
+  - name: styleGuides
+    description: Writing style guides
+  - name: dashboard
+    description: Dashboard summary data
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +46,984 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ── Projects ──────────────────────────────────────────────────────────────
+  /projects:
+    get:
+      operationId: listProjects
+      tags: [projects]
+      summary: List all projects for the authenticated user
+      responses:
+        "200":
+          description: List of projects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Project"
+    post:
+      operationId: createProject
+      tags: [projects]
+      summary: Create a new project
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProjectBody"
+      responses:
+        "201":
+          description: Created project
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+
+  /projects/{id}:
+    get:
+      operationId: getProject
+      tags: [projects]
+      summary: Get a project by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Project
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateProject
+      tags: [projects]
+      summary: Update a project
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProjectBody"
+      responses:
+        "200":
+          description: Updated project
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+    delete:
+      operationId: deleteProject
+      tags: [projects]
+      summary: Delete a project
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /projects/{id}/summary:
+    get:
+      operationId: getProjectSummary
+      tags: [projects, dashboard]
+      summary: Get project summary stats (books, chapters, scenes, word count)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Project summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectSummary"
+
+  /dashboard:
+    get:
+      operationId: getDashboard
+      tags: [dashboard]
+      summary: Get dashboard overview for current user
+      responses:
+        "200":
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardData"
+
+  # ── Books ─────────────────────────────────────────────────────────────────
+  /projects/{projectId}/books:
+    get:
+      operationId: listBooks
+      tags: [books]
+      summary: List books in a project
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of books
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Book"
+    post:
+      operationId: createBook
+      tags: [books]
+      summary: Create a book in a project
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBookBody"
+      responses:
+        "201":
+          description: Created book
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Book"
+
+  /projects/{projectId}/books/{id}:
+    get:
+      operationId: getBook
+      tags: [books]
+      summary: Get a book
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Book
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Book"
+    patch:
+      operationId: updateBook
+      tags: [books]
+      summary: Update a book
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateBookBody"
+      responses:
+        "200":
+          description: Updated book
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Book"
+    delete:
+      operationId: deleteBook
+      tags: [books]
+      summary: Delete a book
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Chapters ───────────────────────────────────────────────────────────────
+  /books/{bookId}/chapters:
+    get:
+      operationId: listChapters
+      tags: [chapters]
+      summary: List chapters in a book
+      parameters:
+        - name: bookId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of chapters
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Chapter"
+    post:
+      operationId: createChapter
+      tags: [chapters]
+      summary: Create a chapter in a book
+      parameters:
+        - name: bookId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateChapterBody"
+      responses:
+        "201":
+          description: Created chapter
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Chapter"
+
+  /books/{bookId}/chapters/{id}:
+    get:
+      operationId: getChapter
+      tags: [chapters]
+      summary: Get a chapter
+      parameters:
+        - name: bookId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Chapter
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Chapter"
+    patch:
+      operationId: updateChapter
+      tags: [chapters]
+      summary: Update a chapter
+      parameters:
+        - name: bookId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateChapterBody"
+      responses:
+        "200":
+          description: Updated chapter
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Chapter"
+    delete:
+      operationId: deleteChapter
+      tags: [chapters]
+      summary: Delete a chapter
+      parameters:
+        - name: bookId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Scenes ─────────────────────────────────────────────────────────────────
+  /chapters/{chapterId}/scenes:
+    get:
+      operationId: listScenes
+      tags: [scenes]
+      summary: List scenes in a chapter
+      parameters:
+        - name: chapterId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of scenes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Scene"
+    post:
+      operationId: createScene
+      tags: [scenes]
+      summary: Create a scene in a chapter
+      parameters:
+        - name: chapterId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSceneBody"
+      responses:
+        "201":
+          description: Created scene
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Scene"
+
+  /chapters/{chapterId}/scenes/{id}:
+    get:
+      operationId: getScene
+      tags: [scenes]
+      summary: Get a scene
+      parameters:
+        - name: chapterId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Scene
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Scene"
+    patch:
+      operationId: updateScene
+      tags: [scenes]
+      summary: Update a scene
+      parameters:
+        - name: chapterId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSceneBody"
+      responses:
+        "200":
+          description: Updated scene
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Scene"
+    delete:
+      operationId: deleteScene
+      tags: [scenes]
+      summary: Delete a scene
+      parameters:
+        - name: chapterId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Characters ────────────────────────────────────────────────────────────
+  /projects/{projectId}/characters:
+    get:
+      operationId: listCharacters
+      tags: [characters]
+      summary: List characters in a project
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of characters
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Character"
+    post:
+      operationId: createCharacter
+      tags: [characters]
+      summary: Create a character
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCharacterBody"
+      responses:
+        "201":
+          description: Created character
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Character"
+
+  /projects/{projectId}/characters/{id}:
+    patch:
+      operationId: updateCharacter
+      tags: [characters]
+      summary: Update a character
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCharacterBody"
+      responses:
+        "200":
+          description: Updated character
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Character"
+    delete:
+      operationId: deleteCharacter
+      tags: [characters]
+      summary: Delete a character
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Locations ─────────────────────────────────────────────────────────────
+  /projects/{projectId}/locations:
+    get:
+      operationId: listLocations
+      tags: [locations]
+      summary: List locations in a project
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of locations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Location"
+    post:
+      operationId: createLocation
+      tags: [locations]
+      summary: Create a location
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateLocationBody"
+      responses:
+        "201":
+          description: Created location
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Location"
+
+  /projects/{projectId}/locations/{id}:
+    patch:
+      operationId: updateLocation
+      tags: [locations]
+      summary: Update a location
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateLocationBody"
+      responses:
+        "200":
+          description: Updated location
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Location"
+    delete:
+      operationId: deleteLocation
+      tags: [locations]
+      summary: Delete a location
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ── World Rules ───────────────────────────────────────────────────────────
+  /projects/{projectId}/world-rules:
+    get:
+      operationId: listWorldRules
+      tags: [worldRules]
+      summary: List world rules in a project
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of world rules
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WorldRule"
+    post:
+      operationId: createWorldRule
+      tags: [worldRules]
+      summary: Create a world rule
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateWorldRuleBody"
+      responses:
+        "201":
+          description: Created world rule
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorldRule"
+
+  /projects/{projectId}/world-rules/{id}:
+    patch:
+      operationId: updateWorldRule
+      tags: [worldRules]
+      summary: Update a world rule
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateWorldRuleBody"
+      responses:
+        "200":
+          description: Updated world rule
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorldRule"
+    delete:
+      operationId: deleteWorldRule
+      tags: [worldRules]
+      summary: Delete a world rule
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Memory Items ──────────────────────────────────────────────────────────
+  /projects/{projectId}/memory:
+    get:
+      operationId: listMemoryItems
+      tags: [memoryItems]
+      summary: List memory items in a project
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of memory items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MemoryItem"
+    post:
+      operationId: createMemoryItem
+      tags: [memoryItems]
+      summary: Create a memory item
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMemoryItemBody"
+      responses:
+        "201":
+          description: Created memory item
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemoryItem"
+
+  /projects/{projectId}/memory/{id}:
+    patch:
+      operationId: updateMemoryItem
+      tags: [memoryItems]
+      summary: Update a memory item
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateMemoryItemBody"
+      responses:
+        "200":
+          description: Updated memory item
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemoryItem"
+    delete:
+      operationId: deleteMemoryItem
+      tags: [memoryItems]
+      summary: Delete a memory item
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Timeline Events ───────────────────────────────────────────────────────
+  /projects/{projectId}/timeline:
+    get:
+      operationId: listTimelineEvents
+      tags: [timelineEvents]
+      summary: List timeline events in a project
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of timeline events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TimelineEvent"
+    post:
+      operationId: createTimelineEvent
+      tags: [timelineEvents]
+      summary: Create a timeline event
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTimelineEventBody"
+      responses:
+        "201":
+          description: Created timeline event
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TimelineEvent"
+
+  /projects/{projectId}/timeline/{id}:
+    patch:
+      operationId: updateTimelineEvent
+      tags: [timelineEvents]
+      summary: Update a timeline event
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTimelineEventBody"
+      responses:
+        "200":
+          description: Updated timeline event
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TimelineEvent"
+    delete:
+      operationId: deleteTimelineEvent
+      tags: [timelineEvents]
+      summary: Delete a timeline event
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ── Style Guide ───────────────────────────────────────────────────────────
+  /projects/{projectId}/style-guide:
+    get:
+      operationId: getStyleGuide
+      tags: [styleGuides]
+      summary: Get the style guide for a project
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Style guide
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StyleGuide"
+        "404":
+          description: Not found
+    put:
+      operationId: upsertStyleGuide
+      tags: [styleGuides]
+      summary: Create or update the style guide for a project
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertStyleGuideBody"
+      responses:
+        "200":
+          description: Updated style guide
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StyleGuide"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +1034,846 @@ components:
       required:
         - status
 
+    # ── Project ──────────────────────────────────────────────────────────────
+    Project:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: string
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        type:
+          type: string
+          enum: [novel, saga, articles, screenplay, other]
+        primaryLanguage:
+          type: string
+        status:
+          type: string
+          enum: [active, archived, completed]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - userId
+        - name
+        - type
+        - primaryLanguage
+        - status
+        - createdAt
+        - updatedAt
+
+    CreateProjectBody:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        type:
+          type: string
+          enum: [novel, saga, articles, screenplay, other]
+        primaryLanguage:
+          type: string
+        status:
+          type: string
+          enum: [active, archived, completed]
+      required:
+        - name
+        - type
+        - primaryLanguage
+
+    UpdateProjectBody:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        type:
+          type: string
+          enum: [novel, saga, articles, screenplay, other]
+        primaryLanguage:
+          type: string
+        status:
+          type: string
+          enum: [active, archived, completed]
+
+    ProjectSummary:
+      type: object
+      properties:
+        projectId:
+          type: integer
+        totalBooks:
+          type: integer
+        totalChapters:
+          type: integer
+        totalScenes:
+          type: integer
+        totalWords:
+          type: integer
+        totalCharacters:
+          type: integer
+        lastEditedAt:
+          type: ["string", "null"]
+          format: date-time
+      required:
+        - projectId
+        - totalBooks
+        - totalChapters
+        - totalScenes
+        - totalWords
+        - totalCharacters
+        - lastEditedAt
+
+    DashboardData:
+      type: object
+      properties:
+        projects:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProjectWithStats"
+        totalProjects:
+          type: integer
+        recentActivity:
+          type: array
+          items:
+            $ref: "#/components/schemas/RecentActivity"
+      required:
+        - projects
+        - totalProjects
+        - recentActivity
+
+    ProjectWithStats:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        type:
+          type: string
+        primaryLanguage:
+          type: string
+        status:
+          type: string
+        totalBooks:
+          type: integer
+        totalChapters:
+          type: integer
+        totalWords:
+          type: integer
+        updatedAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - type
+        - primaryLanguage
+        - status
+        - totalBooks
+        - totalChapters
+        - totalWords
+        - updatedAt
+        - createdAt
+
+    RecentActivity:
+      type: object
+      properties:
+        type:
+          type: string
+        projectId:
+          type: integer
+        projectName:
+          type: string
+        entityName:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - type
+        - projectId
+        - projectName
+        - entityName
+        - updatedAt
+
+    # ── Book ─────────────────────────────────────────────────────────────────
+    Book:
+      type: object
+      properties:
+        id:
+          type: integer
+        projectId:
+          type: integer
+        title:
+          type: string
+        subtitle:
+          type: ["string", "null"]
+        position:
+          type: integer
+        status:
+          type: string
+          enum: [draft, in_progress, completed, archived]
+        synopsis:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - projectId
+        - title
+        - position
+        - status
+        - createdAt
+        - updatedAt
+
+    CreateBookBody:
+      type: object
+      properties:
+        title:
+          type: string
+        subtitle:
+          type: ["string", "null"]
+        position:
+          type: integer
+        status:
+          type: string
+          enum: [draft, in_progress, completed, archived]
+        synopsis:
+          type: ["string", "null"]
+      required:
+        - title
+
+    UpdateBookBody:
+      type: object
+      properties:
+        title:
+          type: string
+        subtitle:
+          type: ["string", "null"]
+        position:
+          type: integer
+        status:
+          type: string
+          enum: [draft, in_progress, completed, archived]
+        synopsis:
+          type: ["string", "null"]
+
+    # ── Chapter ───────────────────────────────────────────────────────────────
+    Chapter:
+      type: object
+      properties:
+        id:
+          type: integer
+        bookId:
+          type: integer
+        title:
+          type: string
+        position:
+          type: integer
+        summary:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [draft, in_review, ready, blocked]
+        wordCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - bookId
+        - title
+        - position
+        - status
+        - wordCount
+        - createdAt
+        - updatedAt
+
+    CreateChapterBody:
+      type: object
+      properties:
+        title:
+          type: string
+        position:
+          type: integer
+        summary:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [draft, in_review, ready, blocked]
+      required:
+        - title
+
+    UpdateChapterBody:
+      type: object
+      properties:
+        title:
+          type: string
+        position:
+          type: integer
+        summary:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [draft, in_review, ready, blocked]
+
+    # ── Scene ─────────────────────────────────────────────────────────────────
+    Scene:
+      type: object
+      properties:
+        id:
+          type: integer
+        chapterId:
+          type: integer
+        title:
+          type: string
+        position:
+          type: integer
+        content:
+          type: ["string", "null"]
+        summary:
+          type: ["string", "null"]
+        povCharacterId:
+          type: ["integer", "null"]
+        locationId:
+          type: ["integer", "null"]
+        timelinePosition:
+          type: ["string", "null"]
+        narrativeGoal:
+          type: ["string", "null"]
+        wordCount:
+          type: integer
+        status:
+          type: string
+          enum: [draft, in_review, ready, blocked, needs_rewrite, needs_continuity]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - chapterId
+        - title
+        - position
+        - wordCount
+        - status
+        - createdAt
+        - updatedAt
+
+    CreateSceneBody:
+      type: object
+      properties:
+        title:
+          type: string
+        position:
+          type: integer
+        content:
+          type: ["string", "null"]
+        summary:
+          type: ["string", "null"]
+        povCharacterId:
+          type: ["integer", "null"]
+        locationId:
+          type: ["integer", "null"]
+        timelinePosition:
+          type: ["string", "null"]
+        narrativeGoal:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [draft, in_review, ready, blocked, needs_rewrite, needs_continuity]
+      required:
+        - title
+
+    UpdateSceneBody:
+      type: object
+      properties:
+        title:
+          type: string
+        position:
+          type: integer
+        content:
+          type: ["string", "null"]
+        summary:
+          type: ["string", "null"]
+        povCharacterId:
+          type: ["integer", "null"]
+        locationId:
+          type: ["integer", "null"]
+        timelinePosition:
+          type: ["string", "null"]
+        narrativeGoal:
+          type: ["string", "null"]
+        wordCount:
+          type: integer
+        status:
+          type: string
+          enum: [draft, in_review, ready, blocked, needs_rewrite, needs_continuity]
+
+    # ── Character ─────────────────────────────────────────────────────────────
+    Character:
+      type: object
+      properties:
+        id:
+          type: integer
+        projectId:
+          type: integer
+        name:
+          type: string
+        role:
+          type: string
+          enum: [protagonist, antagonist, secondary, minor]
+        physicalDescription:
+          type: ["string", "null"]
+        personality:
+          type: ["string", "null"]
+        motivations:
+          type: ["string", "null"]
+        currentState:
+          type: ["string", "null"]
+        knowledgeState:
+          type: ["string", "null"]
+        injuries:
+          type: ["string", "null"]
+        secrets:
+          type: ["string", "null"]
+        relationships:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - projectId
+        - name
+        - role
+        - createdAt
+        - updatedAt
+
+    CreateCharacterBody:
+      type: object
+      properties:
+        name:
+          type: string
+        role:
+          type: string
+          enum: [protagonist, antagonist, secondary, minor]
+        physicalDescription:
+          type: ["string", "null"]
+        personality:
+          type: ["string", "null"]
+        motivations:
+          type: ["string", "null"]
+        currentState:
+          type: ["string", "null"]
+        knowledgeState:
+          type: ["string", "null"]
+        injuries:
+          type: ["string", "null"]
+        secrets:
+          type: ["string", "null"]
+        relationships:
+          type: ["string", "null"]
+      required:
+        - name
+        - role
+
+    UpdateCharacterBody:
+      type: object
+      properties:
+        name:
+          type: string
+        role:
+          type: string
+          enum: [protagonist, antagonist, secondary, minor]
+        physicalDescription:
+          type: ["string", "null"]
+        personality:
+          type: ["string", "null"]
+        motivations:
+          type: ["string", "null"]
+        currentState:
+          type: ["string", "null"]
+        knowledgeState:
+          type: ["string", "null"]
+        injuries:
+          type: ["string", "null"]
+        secrets:
+          type: ["string", "null"]
+        relationships:
+          type: ["string", "null"]
+
+    # ── Location ──────────────────────────────────────────────────────────────
+    Location:
+      type: object
+      properties:
+        id:
+          type: integer
+        projectId:
+          type: integer
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        significance:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - projectId
+        - name
+        - createdAt
+        - updatedAt
+
+    CreateLocationBody:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        significance:
+          type: ["string", "null"]
+      required:
+        - name
+
+    UpdateLocationBody:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        significance:
+          type: ["string", "null"]
+
+    # ── WorldRule ─────────────────────────────────────────────────────────────
+    WorldRule:
+      type: object
+      properties:
+        id:
+          type: integer
+        projectId:
+          type: integer
+        title:
+          type: string
+        content:
+          type: string
+        category:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - projectId
+        - title
+        - content
+        - createdAt
+        - updatedAt
+
+    CreateWorldRuleBody:
+      type: object
+      properties:
+        title:
+          type: string
+        content:
+          type: string
+        category:
+          type: ["string", "null"]
+      required:
+        - title
+        - content
+
+    UpdateWorldRuleBody:
+      type: object
+      properties:
+        title:
+          type: string
+        content:
+          type: string
+        category:
+          type: ["string", "null"]
+
+    # ── MemoryItem ────────────────────────────────────────────────────────────
+    MemoryItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        projectId:
+          type: integer
+        type:
+          type: string
+          enum: [event, injury, secret, relationship, death, promise, mystery, location_change, knowledge, other]
+        title:
+          type: string
+        content:
+          type: string
+        scope:
+          type: string
+          enum: [global, book, chapter, scene]
+        status:
+          type: string
+          enum: [suggested, canonical, discarded]
+        confidence:
+          type: ["integer", "null"]
+        sourceSceneId:
+          type: ["integer", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - projectId
+        - type
+        - title
+        - content
+        - scope
+        - status
+        - createdAt
+        - updatedAt
+
+    CreateMemoryItemBody:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [event, injury, secret, relationship, death, promise, mystery, location_change, knowledge, other]
+        title:
+          type: string
+        content:
+          type: string
+        scope:
+          type: string
+          enum: [global, book, chapter, scene]
+        status:
+          type: string
+          enum: [suggested, canonical, discarded]
+        confidence:
+          type: ["integer", "null"]
+        sourceSceneId:
+          type: ["integer", "null"]
+      required:
+        - type
+        - title
+        - content
+        - scope
+
+    UpdateMemoryItemBody:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [event, injury, secret, relationship, death, promise, mystery, location_change, knowledge, other]
+        title:
+          type: string
+        content:
+          type: string
+        scope:
+          type: string
+          enum: [global, book, chapter, scene]
+        status:
+          type: string
+          enum: [suggested, canonical, discarded]
+        confidence:
+          type: ["integer", "null"]
+
+    # ── TimelineEvent ─────────────────────────────────────────────────────────
+    TimelineEvent:
+      type: object
+      properties:
+        id:
+          type: integer
+        projectId:
+          type: integer
+        bookId:
+          type: ["integer", "null"]
+        chapterId:
+          type: ["integer", "null"]
+        sceneId:
+          type: ["integer", "null"]
+        characterId:
+          type: ["integer", "null"]
+        eventType:
+          type: string
+          enum: [death, injury, travel, revelation, conflict, romance, political, worldbuilding, other]
+        description:
+          type: string
+        dateLabel:
+          type: ["string", "null"]
+        orderIndex:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - projectId
+        - eventType
+        - description
+        - orderIndex
+        - createdAt
+
+    CreateTimelineEventBody:
+      type: object
+      properties:
+        bookId:
+          type: ["integer", "null"]
+        chapterId:
+          type: ["integer", "null"]
+        sceneId:
+          type: ["integer", "null"]
+        characterId:
+          type: ["integer", "null"]
+        eventType:
+          type: string
+          enum: [death, injury, travel, revelation, conflict, romance, political, worldbuilding, other]
+        description:
+          type: string
+        dateLabel:
+          type: ["string", "null"]
+        orderIndex:
+          type: integer
+      required:
+        - eventType
+        - description
+        - orderIndex
+
+    UpdateTimelineEventBody:
+      type: object
+      properties:
+        eventType:
+          type: string
+          enum: [death, injury, travel, revelation, conflict, romance, political, worldbuilding, other]
+        description:
+          type: string
+        dateLabel:
+          type: ["string", "null"]
+        orderIndex:
+          type: integer
+        characterId:
+          type: ["integer", "null"]
+
+    # ── StyleGuide ────────────────────────────────────────────────────────────
+    StyleGuide:
+      type: object
+      properties:
+        id:
+          type: integer
+        projectId:
+          type: integer
+        narrator:
+          type: ["string", "null"]
+          enum: [first_person, third_limited, third_omniscient, second_person, null]
+        tense:
+          type: ["string", "null"]
+          enum: [past, present, null]
+        povType:
+          type: ["string", "null"]
+          enum: [single, multiple, null]
+        tone:
+          type: ["string", "null"]
+        sensorDetailLevel:
+          type: ["string", "null"]
+        violenceLevel:
+          type: ["string", "null"]
+        introspectionLevel:
+          type: ["string", "null"]
+        pacing:
+          type: ["string", "null"]
+          enum: [slow, medium, fast, null]
+        forbiddenWords:
+          type: ["string", "null"]
+        frequentWords:
+          type: ["string", "null"]
+        dialogueRules:
+          type: ["string", "null"]
+        povRules:
+          type: ["string", "null"]
+        additionalNotes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - projectId
+        - createdAt
+        - updatedAt
+
+    UpsertStyleGuideBody:
+      type: object
+      properties:
+        narrator:
+          type: ["string", "null"]
+          enum: [first_person, third_limited, third_omniscient, second_person, null]
+        tense:
+          type: ["string", "null"]
+          enum: [past, present, null]
+        povType:
+          type: ["string", "null"]
+          enum: [single, multiple, null]
+        tone:
+          type: ["string", "null"]
+        sensorDetailLevel:
+          type: ["string", "null"]
+        violenceLevel:
+          type: ["string", "null"]
+        introspectionLevel:
+          type: ["string", "null"]
+        pacing:
+          type: ["string", "null"]
+          enum: [slow, medium, fast, null]
+        forbiddenWords:
+          type: ["string", "null"]
+        frequentWords:
+          type: ["string", "null"]
+        dialogueRules:
+          type: ["string", "null"]
+        povRules:
+          type: ["string", "null"]
+        additionalNotes:
+          type: ["string", "null"]
