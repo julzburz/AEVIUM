@@ -3,6 +3,7 @@ import {
   useListBooks, getListBooksQueryKey, useCreateBook, useDeleteBook, useUpdateBook,
   useListChapters, getListChaptersQueryKey, useCreateChapter, useDeleteChapter, useUpdateChapter,
   useListScenes, getListScenesQueryKey, useCreateScene, useDeleteScene, useUpdateScene,
+  customFetch, UpdateSceneBodyStatus,
 } from "@workspace/api-client-react";
 import { useI18n } from "@/lib/i18n";
 import { useQueryClient } from "@tanstack/react-query";
@@ -116,13 +117,37 @@ function ChapterRow({
 
   const handleDuplicateScene = (scene: { id: number; title: string }, e: React.MouseEvent) => {
     e.stopPropagation();
-    createScene.mutate(
-      { chapterId: chapter.id, data: { title: `${scene.title} (${t('editor.copy')})` } },
-      {
-        onSuccess: () => queryClient.invalidateQueries({ queryKey: getListScenesQueryKey(chapter.id) }),
-        onError: () => toast({ title: t('editor.newScene'), variant: "destructive" }),
-      }
-    );
+    // Fetch original scene data, create copy, then patch with content+metadata
+    customFetch<Record<string, unknown>>(`/api/chapters/${chapter.id}/scenes/${scene.id}`)
+      .then((original) => {
+        createScene.mutate(
+          { chapterId: chapter.id, data: { title: `${scene.title} (${t('editor.copy')})` } },
+          {
+            onSuccess: (newScene) => {
+              updateScene.mutate(
+                {
+                  chapterId: chapter.id,
+                  id: (newScene as { id: number }).id,
+                  data: {
+                    content: (original.content as string) ?? "",
+                    status: ((original.status ?? "draft") as UpdateSceneBodyStatus),
+                    povCharacterId: (original.povCharacterId as number | null) ?? null,
+                    locationId: (original.locationId as number | null) ?? null,
+                    timelinePosition: (original.timelinePosition as string) ?? "",
+                    narrativeGoal: (original.narrativeGoal as string) ?? "",
+                    wordCount: (original.wordCount as number) ?? 0,
+                  },
+                },
+                {
+                  onSuccess: () => queryClient.invalidateQueries({ queryKey: getListScenesQueryKey(chapter.id) }),
+                }
+              );
+            },
+            onError: () => toast({ title: t('editor.newScene'), variant: "destructive" }),
+          }
+        );
+      })
+      .catch(() => toast({ title: t('editor.newScene'), variant: "destructive" }));
   };
 
   const handleRenameScene = (scene: { id: number; title: string }, e: React.MouseEvent) => {
@@ -307,6 +332,8 @@ function BookRow({
   const createChapter = useCreateChapter();
   const deleteChapter = useDeleteChapter();
   const updateChapter = useUpdateChapter();
+  const createScene = useCreateScene();
+  const updateScene = useUpdateScene();
 
   const sorted = [...chapters].sort((a, b) => a.position - b.position);
 
@@ -348,13 +375,55 @@ function BookRow({
 
   const handleDuplicateChapter = (chap: { id: number; title: string }, e: React.MouseEvent) => {
     e.stopPropagation();
-    createChapter.mutate(
-      { bookId: book.id, data: { title: `${chap.title} (${t('editor.copy')})` } },
-      {
-        onSuccess: () => queryClient.invalidateQueries({ queryKey: getListChaptersQueryKey(book.id) }),
-        onError: () => toast({ title: t('editor.newChapter'), variant: "destructive" }),
-      }
-    );
+    // 1. Fetch all scenes of the original chapter
+    customFetch<Array<Record<string, unknown>>>(`/api/chapters/${chap.id}/scenes`)
+      .then((originalScenes) => {
+        // 2. Create new chapter
+        createChapter.mutate(
+          { bookId: book.id, data: { title: `${chap.title} (${t('editor.copy')})` } },
+          {
+            onSuccess: (newChapter) => {
+              const newChapterId = (newChapter as { id: number }).id;
+              // 3. Re-create each scene sequentially preserving position order
+              const sorted = [...originalScenes].sort((a, b) => ((a.position as number) ?? 0) - ((b.position as number) ?? 0));
+              const createNext = (idx: number) => {
+                if (idx >= sorted.length) {
+                  queryClient.invalidateQueries({ queryKey: getListChaptersQueryKey(book.id) });
+                  return;
+                }
+                const orig = sorted[idx];
+                createScene.mutate(
+                  { chapterId: newChapterId, data: { title: (orig.title as string) ?? t('editor.newScene') } },
+                  {
+                    onSuccess: (newScene) => {
+                      updateScene.mutate(
+                        {
+                          chapterId: newChapterId,
+                          id: (newScene as { id: number }).id,
+                          data: {
+                            content: (orig.content as string) ?? "",
+                            status: ((orig.status ?? "draft") as UpdateSceneBodyStatus),
+                            povCharacterId: (orig.povCharacterId as number | null) ?? null,
+                            locationId: (orig.locationId as number | null) ?? null,
+                            timelinePosition: (orig.timelinePosition as string) ?? "",
+                            narrativeGoal: (orig.narrativeGoal as string) ?? "",
+                            wordCount: (orig.wordCount as number) ?? 0,
+                          },
+                        },
+                        { onSuccess: () => createNext(idx + 1) }
+                      );
+                    },
+                    onError: () => createNext(idx + 1),
+                  }
+                );
+              };
+              createNext(0);
+            },
+            onError: () => toast({ title: t('editor.newChapter'), variant: "destructive" }),
+          }
+        );
+      })
+      .catch(() => toast({ title: t('editor.newChapter'), variant: "destructive" }));
   };
 
   return (

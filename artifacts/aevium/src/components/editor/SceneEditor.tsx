@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
   useGetScene, getGetSceneQueryKey,
   useUpdateScene,
@@ -142,8 +142,13 @@ export function SceneEditor({ sceneId, chapterId, projectId, onWordCountChange, 
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [showVersions, setShowVersions] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastContent = useRef<string>("");
   const initializedRef = useRef<number | null>(null);
+
+  // Refs that always reflect current prop/state values — readable inside timer closures
+  const sceneIdRef = useRef(sceneId);
+  const chapterIdRef = useRef(chapterId);
+  useEffect(() => { sceneIdRef.current = sceneId; }, [sceneId]);
+  useEffect(() => { chapterIdRef.current = chapterId; }, [chapterId]);
 
   const { data: scene, isLoading } = useGetScene(chapterId, sceneId, {
     query: { enabled: !!sceneId && !!chapterId, queryKey: getGetSceneQueryKey(chapterId, sceneId) }
@@ -164,10 +169,68 @@ export function SceneEditor({ sceneId, chapterId, projectId, onWordCountChange, 
   const [internalDate, setInternalDate] = useState("");
   const [narrativeGoal, setNarrativeGoal] = useState("");
 
+  // Metadata refs so the timer can read latest values without closing over stale state
+  const sceneTitleRef = useRef(sceneTitle);
+  const sceneStatusRef = useRef(sceneStatus);
+  const povIdRef = useRef(povId);
+  const locIdRef = useRef(locId);
+  const internalDateRef = useRef(internalDate);
+  const narrativeGoalRef = useRef(narrativeGoal);
+  useEffect(() => { sceneTitleRef.current = sceneTitle; }, [sceneTitle]);
+  useEffect(() => { sceneStatusRef.current = sceneStatus; }, [sceneStatus]);
+  useEffect(() => { povIdRef.current = povId; }, [povId]);
+  useEffect(() => { locIdRef.current = locId; }, [locId]);
+  useEffect(() => { internalDateRef.current = internalDate; }, [internalDate]);
+  useEffect(() => { narrativeGoalRef.current = narrativeGoal; }, [narrativeGoal]);
+
   const updateSaveStatus = useCallback((s: "idle" | "saving" | "saved") => {
     setSaveStatus(s);
     onSaveStatusChange?.(s);
   }, [onSaveStatusChange]);
+
+  // doSave receives a pre-captured content snapshot so it NEVER reads editor.getHTML() at fire time.
+  // The sceneId/chapterId it targets are also captured at edit time via refs.
+  const doSaveRef = useRef<(content: string, wordCount: number, forSceneId: number, forChapterId: number) => void>(() => {});
+
+  useMemo(() => {
+    doSaveRef.current = (content: string, wordCount: number, forSceneId: number, forChapterId: number) => {
+      updateSaveStatus("saving");
+      updateScene.mutate(
+        {
+          chapterId: forChapterId,
+          id: forSceneId,
+          data: {
+            content,
+            wordCount,
+            title: sceneTitleRef.current,
+            status: sceneStatusRef.current as SceneStatus,
+            povCharacterId: povIdRef.current,
+            locationId: locIdRef.current,
+            timelinePosition: internalDateRef.current,
+            narrativeGoal: narrativeGoalRef.current,
+          }
+        },
+        {
+          onSuccess: () => {
+            updateSaveStatus("saved");
+            queryClient.invalidateQueries({ queryKey: getGetSceneQueryKey(forChapterId, forSceneId) });
+            setTimeout(() => updateSaveStatus("idle"), 2000);
+          },
+          onError: () => updateSaveStatus("idle"),
+        }
+      );
+    };
+  }, [updateScene, queryClient, updateSaveStatus]);
+
+  // Cancel any pending timer when the active scene changes to prevent cross-scene writes
+  useEffect(() => {
+    return () => {
+      if (saveTimer.current) {
+        clearTimeout(saveTimer.current);
+        saveTimer.current = null;
+      }
+    };
+  }, [sceneId]);
 
   const editor = useEditor({
     extensions: [
@@ -178,9 +241,16 @@ export function SceneEditor({ sceneId, chapterId, projectId, onWordCountChange, 
     ],
     content: "",
     onUpdate: ({ editor: e }) => {
+      // Capture content + identity IMMEDIATELY at edit time — not at timer fire time
+      const content = e.getHTML();
       const words = e.getText().trim().split(/\s+/).filter(Boolean).length;
+      const forSceneId = sceneIdRef.current;
+      const forChapterId = chapterIdRef.current;
       onWordCountChange(words);
-      schedule();
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+      saveTimer.current = setTimeout(() => {
+        doSaveRef.current(content, words, forSceneId, forChapterId);
+      }, 1500);
     },
     editorProps: {
       attributes: {
@@ -195,7 +265,6 @@ export function SceneEditor({ sceneId, chapterId, projectId, onWordCountChange, 
     initializedRef.current = sceneId;
     const html = scene.content ?? "";
     editor.commands.setContent(html);
-    lastContent.current = html;
     const words = editor.getText().trim().split(/\s+/).filter(Boolean).length;
     onWordCountChange(words);
     setSceneTitle(scene.title ?? "");
@@ -206,46 +275,40 @@ export function SceneEditor({ sceneId, chapterId, projectId, onWordCountChange, 
     setNarrativeGoal(scene.narrativeGoal ?? "");
   }, [scene, editor, sceneId, onWordCountChange]);
 
-  const doSave = useCallback((extra?: Partial<{ title: string; status: string; povCharacterId: number | null; locationId: number | null; timelinePosition: string; narrativeGoal: string }>) => {
+  // Flush: capture snapshot immediately and save (used on metadata blur / select changes)
+  const flush = useCallback((overrides?: Partial<{ title: string; status: string; povCharacterId: number | null; locationId: number | null; timelinePosition: string; narrativeGoal: string }>) => {
     if (!editor) return;
-    const html = editor.getHTML();
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    const content = editor.getHTML();
     const words = editor.getText().trim().split(/\s+/).filter(Boolean).length;
+    const forSceneId = sceneIdRef.current;
+    const forChapterId = chapterIdRef.current;
     updateSaveStatus("saving");
     updateScene.mutate(
       {
-        chapterId, id: sceneId,
+        chapterId: forChapterId,
+        id: forSceneId,
         data: {
-          content: html,
-          title: extra?.title ?? sceneTitle,
-          status: (extra?.status ?? sceneStatus) as SceneStatus,
-          povCharacterId: extra?.povCharacterId !== undefined ? extra.povCharacterId : povId,
-          locationId: extra?.locationId !== undefined ? extra.locationId : locId,
-          timelinePosition: extra?.timelinePosition ?? internalDate,
-          narrativeGoal: extra?.narrativeGoal ?? narrativeGoal,
+          content,
           wordCount: words,
+          title: overrides?.title ?? sceneTitleRef.current,
+          status: ((overrides?.status ?? sceneStatusRef.current) as SceneStatus),
+          povCharacterId: overrides?.povCharacterId !== undefined ? overrides.povCharacterId : povIdRef.current,
+          locationId: overrides?.locationId !== undefined ? overrides.locationId : locIdRef.current,
+          timelinePosition: overrides?.timelinePosition ?? internalDateRef.current,
+          narrativeGoal: overrides?.narrativeGoal ?? narrativeGoalRef.current,
         }
       },
       {
         onSuccess: () => {
-          lastContent.current = html;
           updateSaveStatus("saved");
-          queryClient.invalidateQueries({ queryKey: getGetSceneQueryKey(chapterId, sceneId) });
+          queryClient.invalidateQueries({ queryKey: getGetSceneQueryKey(forChapterId, forSceneId) });
           setTimeout(() => updateSaveStatus("idle"), 2000);
         },
         onError: () => updateSaveStatus("idle"),
       }
     );
-  }, [editor, chapterId, sceneId, sceneTitle, sceneStatus, povId, locId, internalDate, narrativeGoal, updateScene, queryClient, updateSaveStatus]);
-
-  const schedule = useCallback(() => {
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => doSave(), 1500);
-  }, [doSave]);
-
-  const flush = useCallback(() => {
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    doSave();
-  }, [doSave]);
+  }, [editor, updateScene, queryClient, updateSaveStatus]);
 
   if (isLoading) {
     return (
@@ -267,12 +330,12 @@ export function SceneEditor({ sceneId, chapterId, projectId, onWordCountChange, 
           className="h-7 text-sm font-semibold border-0 bg-transparent p-0 focus-visible:ring-0 min-w-[120px] flex-1 max-w-[200px]"
           value={sceneTitle}
           onChange={(e) => setSceneTitle(e.target.value)}
-          onBlur={flush}
+          onBlur={() => flush()}
           placeholder={t('editor.sceneTitle')}
           data-testid="input-scene-title"
         />
 
-        <Select value={sceneStatus} onValueChange={(v: SceneStatus) => { setSceneStatus(v); doSave({ status: v }); }}>
+        <Select value={sceneStatus} onValueChange={(v: SceneStatus) => { setSceneStatus(v); sceneStatusRef.current = v; flush({ status: v }); }}>
           <SelectTrigger className="h-6 text-xs border-0 bg-transparent p-0 w-auto focus:ring-0" data-testid="select-scene-status">
             <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide ${STATUS_CLASS[sceneStatus]}`}>
               {t(`editor.${sceneStatus}` as Parameters<typeof t>[0])}
@@ -287,7 +350,7 @@ export function SceneEditor({ sceneId, chapterId, projectId, onWordCountChange, 
           </SelectContent>
         </Select>
 
-        <Select value={povId?.toString() ?? "none"} onValueChange={(v) => { const id = v === "none" ? null : Number(v); setPovId(id); doSave({ povCharacterId: id }); }}>
+        <Select value={povId?.toString() ?? "none"} onValueChange={(v) => { const id = v === "none" ? null : Number(v); setPovId(id); povIdRef.current = id; flush({ povCharacterId: id }); }}>
           <SelectTrigger className="h-6 text-xs w-auto min-w-[72px] max-w-[120px]" data-testid="select-scene-pov">
             <SelectValue placeholder={t('editor.noPov')} />
           </SelectTrigger>
@@ -297,7 +360,7 @@ export function SceneEditor({ sceneId, chapterId, projectId, onWordCountChange, 
           </SelectContent>
         </Select>
 
-        <Select value={locId?.toString() ?? "none"} onValueChange={(v) => { const id = v === "none" ? null : Number(v); setLocId(id); doSave({ locationId: id }); }}>
+        <Select value={locId?.toString() ?? "none"} onValueChange={(v) => { const id = v === "none" ? null : Number(v); setLocId(id); locIdRef.current = id; flush({ locationId: id }); }}>
           <SelectTrigger className="h-6 text-xs w-auto min-w-[72px] max-w-[120px]" data-testid="select-scene-location">
             <SelectValue placeholder={t('editor.noLocationSelected')} />
           </SelectTrigger>
@@ -311,7 +374,7 @@ export function SceneEditor({ sceneId, chapterId, projectId, onWordCountChange, 
           className="h-6 text-xs w-[110px] px-2"
           value={internalDate}
           onChange={(e) => setInternalDate(e.target.value)}
-          onBlur={flush}
+          onBlur={() => flush()}
           placeholder={t('editor.internalDate')}
           data-testid="input-scene-date"
         />
@@ -320,7 +383,7 @@ export function SceneEditor({ sceneId, chapterId, projectId, onWordCountChange, 
           className="h-6 text-xs flex-1 min-w-[100px] max-w-[200px] px-2"
           value={narrativeGoal}
           onChange={(e) => setNarrativeGoal(e.target.value)}
-          onBlur={flush}
+          onBlur={() => flush()}
           placeholder={t('editor.narrativeGoal')}
           data-testid="input-scene-goal"
         />
