@@ -3,8 +3,9 @@ import { useGetDashboard, getGetDashboardQueryKey, useCreateProject } from "@wor
 import { useI18n } from "@/lib/i18n";
 import { Link, useLocation } from "wouter";
 import { formatDistanceToNow } from "date-fns";
-import { BookOpen, FileText, Plus, Layout, History, Search } from "lucide-react";
+import { BookOpen, FileText, Plus, Layout, History, Search, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -15,6 +16,12 @@ import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 
 type ProjectType = "novel" | "saga" | "articles" | "screenplay" | "other";
+
+const statusVariant: Record<string, "default" | "secondary" | "outline"> = {
+  active: "default",
+  completed: "secondary",
+  archived: "outline",
+};
 
 export default function Dashboard() {
   const { t } = useI18n();
@@ -112,7 +119,7 @@ export default function Dashboard() {
                   value={newProjectName}
                   onChange={(e) => setNewProjectName(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') handleCreateProject(); }}
-                  placeholder="e.g. Las Voces del Viento"
+                  placeholder={t('dashboard.form.name')}
                 />
               </div>
               <div className="space-y-2">
@@ -194,28 +201,34 @@ export default function Dashboard() {
               className="hover:border-primary/50 transition-colors flex flex-col"
               data-testid={`card-project-${project.id}`}
             >
-              <CardHeader className="pb-4">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle className="text-xl mb-1 line-clamp-1">
+              <CardHeader className="pb-3">
+                <div className="flex justify-between items-start gap-2">
+                  <div className="flex-1 min-w-0">
+                    <CardTitle className="text-lg mb-1 line-clamp-1">
                       <Link href={`/projects/${project.id}`} className="hover:underline" data-testid={`link-project-${project.id}`}>
                         {project.name}
                       </Link>
                     </CardTitle>
                     <CardDescription className="capitalize flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-secondary inline-block" />
                       {t(`dashboard.type.${project.type}` as Parameters<typeof t>[0])}
                     </CardDescription>
                   </div>
+                  <Badge
+                    variant={statusVariant[project.status] ?? "outline"}
+                    className="shrink-0 text-xs capitalize"
+                    data-testid={`badge-status-${project.id}`}
+                  >
+                    {t(`project.status.${project.status}` as Parameters<typeof t>[0])}
+                  </Badge>
                 </div>
               </CardHeader>
-              <CardContent className="flex-1 pb-4">
-                <div className="flex gap-4 text-sm text-muted-foreground">
+              <CardContent className="flex-1 pb-3">
+                <div className="flex flex-wrap gap-3 text-sm text-muted-foreground mb-3">
                   <div className="flex items-center gap-1.5" title={t('dashboard.stats.books')}>
-                    <BookOpen className="w-4 h-4" /> {project.totalBooks}
+                    <BookOpen className="w-3.5 h-3.5" /> {project.totalBooks}
                   </div>
                   <div className="flex items-center gap-1.5" title={t('dashboard.stats.chapters')}>
-                    <FileText className="w-4 h-4" /> {project.totalChapters}
+                    <FileText className="w-3.5 h-3.5" /> {project.totalChapters}
                   </div>
                   <div className="flex items-center gap-1.5" title={t('dashboard.stats.words')}>
                     <span className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">
@@ -223,12 +236,18 @@ export default function Dashboard() {
                     </span>
                   </div>
                 </div>
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Globe className="w-3 h-3" />
+                  <span data-testid={`text-language-${project.id}`}>
+                    {t(`project.language.${project.primaryLanguage}` as Parameters<typeof t>[0])}
+                  </span>
+                </div>
               </CardContent>
-              <CardFooter className="flex justify-between border-t mt-auto pt-4 bg-muted/10 rounded-b-xl">
+              <CardFooter className="flex justify-between border-t mt-auto pt-3 pb-3 bg-muted/10 rounded-b-xl">
                 <span className="text-xs text-muted-foreground">
                   {t('dashboard.project.updated')} {formatDistanceToNow(new Date(project.updatedAt), { addSuffix: true })}
                 </span>
-                <Button size="sm" variant="ghost" asChild className="h-8" data-testid={`button-open-project-${project.id}`}>
+                <Button size="sm" variant="ghost" asChild className="h-7 text-xs" data-testid={`button-open-project-${project.id}`}>
                   <Link href={`/projects/${project.id}`}>{t('dashboard.project.open')}</Link>
                 </Button>
               </CardFooter>

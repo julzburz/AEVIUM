@@ -80,17 +80,33 @@ export function RightPanel({ projectId }: RightPanelProps) {
         {tab === "memory" && (
           <div data-testid="panel-memory">
             <div className="flex flex-wrap gap-1 mb-3">
-              <button className={subTabClass(memSubTab === "characters")} onClick={() => setMemSubTab("characters")} data-testid="subtab-characters">
+              <button
+                className={subTabClass(memSubTab === "characters")}
+                onClick={() => setMemSubTab("characters")}
+                data-testid="subtab-characters"
+              >
                 <Users className="w-3 h-3 inline mr-1" />{t('editor.characters')}
               </button>
-              <button className={subTabClass(memSubTab === "locations")} onClick={() => setMemSubTab("locations")} data-testid="subtab-locations">
+              <button
+                className={subTabClass(memSubTab === "locations")}
+                onClick={() => setMemSubTab("locations")}
+                data-testid="subtab-locations"
+              >
                 <Map className="w-3 h-3 inline mr-1" />{t('editor.locations')}
               </button>
-              <button className={subTabClass(memSubTab === "worldRules")} onClick={() => setMemSubTab("worldRules")} data-testid="subtab-world-rules">
+              <button
+                className={subTabClass(memSubTab === "worldRules")}
+                onClick={() => setMemSubTab("worldRules")}
+                data-testid="subtab-world-rules"
+              >
                 <Globe className="w-3 h-3 inline mr-1" />{t('editor.worldRules')}
               </button>
-              <button className={subTabClass(memSubTab === "items")} onClick={() => setMemSubTab("items")} data-testid="subtab-memory-items">
-                <BookMarked className="w-3 h-3 inline mr-1" />Items
+              <button
+                className={subTabClass(memSubTab === "items")}
+                onClick={() => setMemSubTab("items")}
+                data-testid="subtab-memory-items"
+              >
+                <BookMarked className="w-3 h-3 inline mr-1" />{t('editor.memoryItems')}
               </button>
             </div>
 

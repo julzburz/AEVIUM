@@ -9,6 +9,7 @@ export const aiCredentialsTable = pgTable("ai_credentials", {
   projectId: integer("project_id").references(() => projectsTable.id, { onDelete: "cascade" }),
   provider: aiProviderEnum("provider").notNull().default("openai"),
   model: text("model"),
+  encryptedSecret: text("encrypted_secret"),
   isDefault: boolean("is_default").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),

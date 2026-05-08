@@ -6,7 +6,7 @@ import { ClerkProvider, SignIn, SignUp, Show, useClerk } from "@clerk/react";
 import { publishableKeyFromHost } from "@clerk/react/internal";
 import { shadcn } from "@clerk/themes";
 import { ThemeProvider } from "next-themes";
-import { I18nProvider, useI18n } from "./lib/i18n";
+import { I18nProvider } from "./lib/i18n";
 import NotFound from "@/pages/not-found";
 import { useEffect, useRef } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -66,46 +66,11 @@ function ClerkQueryClientCacheInvalidator() {
   return null;
 }
 
-function Landing() {
-  const { t } = useI18n();
-  return (
-    <div className="min-h-[100dvh] bg-background flex flex-col items-center justify-center p-4">
-      <img
-        src={`${basePath}/logo.svg`}
-        alt="AEVIUM Logo"
-        className="w-24 h-24 mb-8 drop-shadow-[0_0_15px_rgba(169,53,235,0.4)]"
-      />
-      <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-4 tracking-tighter">
-        AEVIUM
-      </h1>
-      <p className="text-xl text-muted-foreground mb-8 text-center max-w-lg">
-        {t('landing.subtitle')}
-      </p>
-      <div className="flex gap-4">
-        <a
-          href={`${basePath}/sign-in`}
-          className="bg-muted text-foreground px-6 py-3 rounded-md font-medium hover:bg-muted/80 transition-colors border border-border"
-          data-testid="link-sign-in"
-        >
-          {t('landing.signIn')}
-        </a>
-        <a
-          href={`${basePath}/sign-up`}
-          className="bg-primary text-primary-foreground px-6 py-3 rounded-md font-medium hover:bg-primary/90 transition-colors shadow-[0_0_20px_rgba(169,53,235,0.3)]"
-          data-testid="link-start-writing"
-        >
-          {t('landing.cta')}
-        </a>
-      </div>
-    </div>
-  );
-}
-
 function HomeRedirect() {
   return (
     <>
       <Show when="signed-in"><Redirect to="/dashboard" /></Show>
-      <Show when="signed-out"><Landing /></Show>
+      <Show when="signed-out"><Redirect to="/sign-in" /></Show>
     </>
   );
 }
