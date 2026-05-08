@@ -21,7 +21,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           <UserMenu />
         </div>
       </header>
-      <main className="flex-1 flex flex-col overflow-hidden relative">
+      <main className="flex-1 flex flex-col overflow-y-auto relative">
         {children}
       </main>
     </div>

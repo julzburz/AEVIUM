@@ -68,7 +68,23 @@ export default function Dashboard() {
     });
   };
 
-  const allProjects = dashboard?.projects ?? [];
+  const MOCK_PROJECTS = [
+    { id: 1, name: "El último horizonte", type: "novel" as const, status: "active" as const, totalBooks: 1, totalChapters: 12, totalWords: 34820, primaryLanguage: "es", updatedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString() },
+    { id: 2, name: "Crónicas del vacío", type: "saga" as const, status: "active" as const, totalBooks: 3, totalChapters: 41, totalWords: 127450, primaryLanguage: "es", updatedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString() },
+    { id: 3, name: "The Lighthouse Keeper", type: "novel" as const, status: "completed" as const, totalBooks: 1, totalChapters: 22, totalWords: 78300, primaryLanguage: "en", updatedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString() },
+    { id: 4, name: "Fragmentos de luz", type: "articles" as const, status: "active" as const, totalBooks: 1, totalChapters: 8, totalWords: 14200, primaryLanguage: "es", updatedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString() },
+    { id: 5, name: "Nebulosa: Origen", type: "screenplay" as const, status: "archived" as const, totalBooks: 1, totalChapters: 5, totalWords: 9600, primaryLanguage: "es", updatedAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString() },
+  ];
+
+  const MOCK_ACTIVITY = [
+    { projectName: "El último horizonte", entityName: "Capítulo 12 — El regreso", updatedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString() },
+    { projectName: "Crónicas del vacío", entityName: "Libro 2 · Escena 7 — La traición", updatedAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString() },
+    { projectName: "The Lighthouse Keeper", entityName: "Chapter 22 — End of summer", updatedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString() },
+    { projectName: "Fragmentos de luz", entityName: "Artículo — Filosofía del tiempo libre", updatedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString() },
+  ];
+
+  const rawProjects = dashboard?.projects ?? [];
+  const allProjects = rawProjects.length > 0 ? rawProjects : MOCK_PROJECTS;
 
   const filteredProjects = useMemo(() => {
     return allProjects.filter((p) => {
@@ -78,11 +94,12 @@ export default function Dashboard() {
     });
   }, [allProjects, searchQuery, filterType]);
 
-  const recentActivity = dashboard?.recentActivity ?? [];
+  const rawActivity = dashboard?.recentActivity ?? [];
+  const recentActivity = rawActivity.length > 0 ? rawActivity : MOCK_ACTIVITY;
 
   if (isLoading) {
     return (
-      <div className="container py-8 space-y-8">
+      <div className="w-full max-w-6xl mx-auto px-6 py-8 space-y-8">
         <div className="flex justify-between items-center">
           <Skeleton className="h-10 w-48" />
           <Skeleton className="h-10 w-32" />
@@ -97,7 +114,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="container py-8">
+    <div className="w-full max-w-6xl mx-auto px-6 py-8">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold tracking-tight" data-testid="text-dashboard-title">
           {t('dashboard.title')}
