@@ -17,9 +17,23 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  AiCheckContradictionBody,
+  AiCoherenceResult,
+  AiContinueSceneBody,
+  AiContradictionResult,
+  AiCredential,
+  AiCredentialTestResult,
+  AiExtractMemoryBody,
+  AiExtractMemoryResult,
+  AiFreeChatBody,
+  AiGenerationResult,
+  AiReviewCoherenceBody,
+  AiRewriteSelectionBody,
   Book,
   Chapter,
   Character,
+  ContinuityAlert,
+  CreateAiCredentialBody,
   CreateBookBody,
   CreateChapterBody,
   CreateCharacterBody,
@@ -31,12 +45,14 @@ import type {
   CreateWorldRuleBody,
   DashboardData,
   HealthStatus,
+  ListContinuityAlertsParams,
   Location,
   MemoryItem,
   Project,
   ProjectSummary,
   Scene,
   StyleGuide,
+  TestAiCredentialBody,
   TimelineEvent,
   UpdateBookBody,
   UpdateChapterBody,
@@ -3927,4 +3943,1081 @@ export const useUpsertStyleGuide = <
   TContext
 > => {
   return useMutation(getUpsertStyleGuideMutationOptions(options));
+};
+
+/**
+ * @summary List AI provider credentials for a project
+ */
+export const getListAiCredentialsUrl = (projectId: number) => {
+  return `/api/projects/${projectId}/ai-credentials`;
+};
+
+export const listAiCredentials = async (
+  projectId: number,
+  options?: RequestInit,
+): Promise<AiCredential[]> => {
+  return customFetch<AiCredential[]>(getListAiCredentialsUrl(projectId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListAiCredentialsQueryKey = (projectId: number) => {
+  return [`/api/projects/${projectId}/ai-credentials`] as const;
+};
+
+export const getListAiCredentialsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listAiCredentials>>,
+  TError = ErrorType<unknown>,
+>(
+  projectId: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listAiCredentials>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListAiCredentialsQueryKey(projectId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listAiCredentials>>
+  > = ({ signal }) =>
+    listAiCredentials(projectId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!projectId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof listAiCredentials>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListAiCredentialsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listAiCredentials>>
+>;
+export type ListAiCredentialsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List AI provider credentials for a project
+ */
+
+export function useListAiCredentials<
+  TData = Awaited<ReturnType<typeof listAiCredentials>>,
+  TError = ErrorType<unknown>,
+>(
+  projectId: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listAiCredentials>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListAiCredentialsQueryOptions(projectId, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create AI provider credential
+ */
+export const getCreateAiCredentialUrl = (projectId: number) => {
+  return `/api/projects/${projectId}/ai-credentials`;
+};
+
+export const createAiCredential = async (
+  projectId: number,
+  createAiCredentialBody: CreateAiCredentialBody,
+  options?: RequestInit,
+): Promise<AiCredential> => {
+  return customFetch<AiCredential>(getCreateAiCredentialUrl(projectId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createAiCredentialBody),
+  });
+};
+
+export const getCreateAiCredentialMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createAiCredential>>,
+    TError,
+    { projectId: number; data: BodyType<CreateAiCredentialBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createAiCredential>>,
+  TError,
+  { projectId: number; data: BodyType<CreateAiCredentialBody> },
+  TContext
+> => {
+  const mutationKey = ["createAiCredential"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createAiCredential>>,
+    { projectId: number; data: BodyType<CreateAiCredentialBody> }
+  > = (props) => {
+    const { projectId, data } = props ?? {};
+
+    return createAiCredential(projectId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateAiCredentialMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createAiCredential>>
+>;
+export type CreateAiCredentialMutationBody = BodyType<CreateAiCredentialBody>;
+export type CreateAiCredentialMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create AI provider credential
+ */
+export const useCreateAiCredential = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createAiCredential>>,
+    TError,
+    { projectId: number; data: BodyType<CreateAiCredentialBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createAiCredential>>,
+  TError,
+  { projectId: number; data: BodyType<CreateAiCredentialBody> },
+  TContext
+> => {
+  return useMutation(getCreateAiCredentialMutationOptions(options));
+};
+
+/**
+ * @summary Delete an AI credential
+ */
+export const getDeleteAiCredentialUrl = (projectId: number, id: number) => {
+  return `/api/projects/${projectId}/ai-credentials/${id}`;
+};
+
+export const deleteAiCredential = async (
+  projectId: number,
+  id: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getDeleteAiCredentialUrl(projectId, id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteAiCredentialMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteAiCredential>>,
+    TError,
+    { projectId: number; id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteAiCredential>>,
+  TError,
+  { projectId: number; id: number },
+  TContext
+> => {
+  const mutationKey = ["deleteAiCredential"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteAiCredential>>,
+    { projectId: number; id: number }
+  > = (props) => {
+    const { projectId, id } = props ?? {};
+
+    return deleteAiCredential(projectId, id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteAiCredentialMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteAiCredential>>
+>;
+
+export type DeleteAiCredentialMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Delete an AI credential
+ */
+export const useDeleteAiCredential = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteAiCredential>>,
+    TError,
+    { projectId: number; id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteAiCredential>>,
+  TError,
+  { projectId: number; id: number },
+  TContext
+> => {
+  return useMutation(getDeleteAiCredentialMutationOptions(options));
+};
+
+/**
+ * @summary Test an AI provider credential
+ */
+export const getTestAiCredentialUrl = (projectId: number) => {
+  return `/api/projects/${projectId}/ai-credentials/test`;
+};
+
+export const testAiCredential = async (
+  projectId: number,
+  testAiCredentialBody: TestAiCredentialBody,
+  options?: RequestInit,
+): Promise<AiCredentialTestResult> => {
+  return customFetch<AiCredentialTestResult>(
+    getTestAiCredentialUrl(projectId),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(testAiCredentialBody),
+    },
+  );
+};
+
+export const getTestAiCredentialMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof testAiCredential>>,
+    TError,
+    { projectId: number; data: BodyType<TestAiCredentialBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof testAiCredential>>,
+  TError,
+  { projectId: number; data: BodyType<TestAiCredentialBody> },
+  TContext
+> => {
+  const mutationKey = ["testAiCredential"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof testAiCredential>>,
+    { projectId: number; data: BodyType<TestAiCredentialBody> }
+  > = (props) => {
+    const { projectId, data } = props ?? {};
+
+    return testAiCredential(projectId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type TestAiCredentialMutationResult = NonNullable<
+  Awaited<ReturnType<typeof testAiCredential>>
+>;
+export type TestAiCredentialMutationBody = BodyType<TestAiCredentialBody>;
+export type TestAiCredentialMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Test an AI provider credential
+ */
+export const useTestAiCredential = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof testAiCredential>>,
+    TError,
+    { projectId: number; data: BodyType<TestAiCredentialBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof testAiCredential>>,
+  TError,
+  { projectId: number; data: BodyType<TestAiCredentialBody> },
+  TContext
+> => {
+  return useMutation(getTestAiCredentialMutationOptions(options));
+};
+
+/**
+ * @summary Continue a scene using AI
+ */
+export const getAiContinueSceneUrl = () => {
+  return `/api/ai/continue-scene`;
+};
+
+export const aiContinueScene = async (
+  aiContinueSceneBody: AiContinueSceneBody,
+  options?: RequestInit,
+): Promise<AiGenerationResult> => {
+  return customFetch<AiGenerationResult>(getAiContinueSceneUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(aiContinueSceneBody),
+  });
+};
+
+export const getAiContinueSceneMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof aiContinueScene>>,
+    TError,
+    { data: BodyType<AiContinueSceneBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof aiContinueScene>>,
+  TError,
+  { data: BodyType<AiContinueSceneBody> },
+  TContext
+> => {
+  const mutationKey = ["aiContinueScene"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof aiContinueScene>>,
+    { data: BodyType<AiContinueSceneBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return aiContinueScene(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AiContinueSceneMutationResult = NonNullable<
+  Awaited<ReturnType<typeof aiContinueScene>>
+>;
+export type AiContinueSceneMutationBody = BodyType<AiContinueSceneBody>;
+export type AiContinueSceneMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Continue a scene using AI
+ */
+export const useAiContinueScene = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof aiContinueScene>>,
+    TError,
+    { data: BodyType<AiContinueSceneBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof aiContinueScene>>,
+  TError,
+  { data: BodyType<AiContinueSceneBody> },
+  TContext
+> => {
+  return useMutation(getAiContinueSceneMutationOptions(options));
+};
+
+/**
+ * @summary Rewrite a selected passage using AI
+ */
+export const getAiRewriteSelectionUrl = () => {
+  return `/api/ai/rewrite-selection`;
+};
+
+export const aiRewriteSelection = async (
+  aiRewriteSelectionBody: AiRewriteSelectionBody,
+  options?: RequestInit,
+): Promise<AiGenerationResult> => {
+  return customFetch<AiGenerationResult>(getAiRewriteSelectionUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(aiRewriteSelectionBody),
+  });
+};
+
+export const getAiRewriteSelectionMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof aiRewriteSelection>>,
+    TError,
+    { data: BodyType<AiRewriteSelectionBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof aiRewriteSelection>>,
+  TError,
+  { data: BodyType<AiRewriteSelectionBody> },
+  TContext
+> => {
+  const mutationKey = ["aiRewriteSelection"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof aiRewriteSelection>>,
+    { data: BodyType<AiRewriteSelectionBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return aiRewriteSelection(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AiRewriteSelectionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof aiRewriteSelection>>
+>;
+export type AiRewriteSelectionMutationBody = BodyType<AiRewriteSelectionBody>;
+export type AiRewriteSelectionMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Rewrite a selected passage using AI
+ */
+export const useAiRewriteSelection = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof aiRewriteSelection>>,
+    TError,
+    { data: BodyType<AiRewriteSelectionBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof aiRewriteSelection>>,
+  TError,
+  { data: BodyType<AiRewriteSelectionBody> },
+  TContext
+> => {
+  return useMutation(getAiRewriteSelectionMutationOptions(options));
+};
+
+/**
+ * @summary Review scene coherence against canonical memory
+ */
+export const getAiReviewCoherenceUrl = () => {
+  return `/api/ai/review-coherence`;
+};
+
+export const aiReviewCoherence = async (
+  aiReviewCoherenceBody: AiReviewCoherenceBody,
+  options?: RequestInit,
+): Promise<AiCoherenceResult> => {
+  return customFetch<AiCoherenceResult>(getAiReviewCoherenceUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(aiReviewCoherenceBody),
+  });
+};
+
+export const getAiReviewCoherenceMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof aiReviewCoherence>>,
+    TError,
+    { data: BodyType<AiReviewCoherenceBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof aiReviewCoherence>>,
+  TError,
+  { data: BodyType<AiReviewCoherenceBody> },
+  TContext
+> => {
+  const mutationKey = ["aiReviewCoherence"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof aiReviewCoherence>>,
+    { data: BodyType<AiReviewCoherenceBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return aiReviewCoherence(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AiReviewCoherenceMutationResult = NonNullable<
+  Awaited<ReturnType<typeof aiReviewCoherence>>
+>;
+export type AiReviewCoherenceMutationBody = BodyType<AiReviewCoherenceBody>;
+export type AiReviewCoherenceMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Review scene coherence against canonical memory
+ */
+export const useAiReviewCoherence = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof aiReviewCoherence>>,
+    TError,
+    { data: BodyType<AiReviewCoherenceBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof aiReviewCoherence>>,
+  TError,
+  { data: BodyType<AiReviewCoherenceBody> },
+  TContext
+> => {
+  return useMutation(getAiReviewCoherenceMutationOptions(options));
+};
+
+/**
+ * @summary Extract memory elements from generated text
+ */
+export const getAiExtractMemoryUrl = () => {
+  return `/api/ai/extract-memory`;
+};
+
+export const aiExtractMemory = async (
+  aiExtractMemoryBody: AiExtractMemoryBody,
+  options?: RequestInit,
+): Promise<AiExtractMemoryResult> => {
+  return customFetch<AiExtractMemoryResult>(getAiExtractMemoryUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(aiExtractMemoryBody),
+  });
+};
+
+export const getAiExtractMemoryMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof aiExtractMemory>>,
+    TError,
+    { data: BodyType<AiExtractMemoryBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof aiExtractMemory>>,
+  TError,
+  { data: BodyType<AiExtractMemoryBody> },
+  TContext
+> => {
+  const mutationKey = ["aiExtractMemory"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof aiExtractMemory>>,
+    { data: BodyType<AiExtractMemoryBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return aiExtractMemory(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AiExtractMemoryMutationResult = NonNullable<
+  Awaited<ReturnType<typeof aiExtractMemory>>
+>;
+export type AiExtractMemoryMutationBody = BodyType<AiExtractMemoryBody>;
+export type AiExtractMemoryMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Extract memory elements from generated text
+ */
+export const useAiExtractMemory = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof aiExtractMemory>>,
+    TError,
+    { data: BodyType<AiExtractMemoryBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof aiExtractMemory>>,
+  TError,
+  { data: BodyType<AiExtractMemoryBody> },
+  TContext
+> => {
+  return useMutation(getAiExtractMemoryMutationOptions(options));
+};
+
+/**
+ * @summary Check instruction against canonical memory for contradictions
+ */
+export const getAiCheckContradictionUrl = () => {
+  return `/api/ai/check-contradiction`;
+};
+
+export const aiCheckContradiction = async (
+  aiCheckContradictionBody: AiCheckContradictionBody,
+  options?: RequestInit,
+): Promise<AiContradictionResult> => {
+  return customFetch<AiContradictionResult>(getAiCheckContradictionUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(aiCheckContradictionBody),
+  });
+};
+
+export const getAiCheckContradictionMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof aiCheckContradiction>>,
+    TError,
+    { data: BodyType<AiCheckContradictionBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof aiCheckContradiction>>,
+  TError,
+  { data: BodyType<AiCheckContradictionBody> },
+  TContext
+> => {
+  const mutationKey = ["aiCheckContradiction"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof aiCheckContradiction>>,
+    { data: BodyType<AiCheckContradictionBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return aiCheckContradiction(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AiCheckContradictionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof aiCheckContradiction>>
+>;
+export type AiCheckContradictionMutationBody =
+  BodyType<AiCheckContradictionBody>;
+export type AiCheckContradictionMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Check instruction against canonical memory for contradictions
+ */
+export const useAiCheckContradiction = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof aiCheckContradiction>>,
+    TError,
+    { data: BodyType<AiCheckContradictionBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof aiCheckContradiction>>,
+  TError,
+  { data: BodyType<AiCheckContradictionBody> },
+  TContext
+> => {
+  return useMutation(getAiCheckContradictionMutationOptions(options));
+};
+
+/**
+ * @summary Free narrative chat with AEVIUM
+ */
+export const getAiFreechatUrl = () => {
+  return `/api/ai/free-chat`;
+};
+
+export const aiFreechat = async (
+  aiFreeChatBody: AiFreeChatBody,
+  options?: RequestInit,
+): Promise<AiGenerationResult> => {
+  return customFetch<AiGenerationResult>(getAiFreechatUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(aiFreeChatBody),
+  });
+};
+
+export const getAiFreechatMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof aiFreechat>>,
+    TError,
+    { data: BodyType<AiFreeChatBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof aiFreechat>>,
+  TError,
+  { data: BodyType<AiFreeChatBody> },
+  TContext
+> => {
+  const mutationKey = ["aiFreechat"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof aiFreechat>>,
+    { data: BodyType<AiFreeChatBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return aiFreechat(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AiFreechatMutationResult = NonNullable<
+  Awaited<ReturnType<typeof aiFreechat>>
+>;
+export type AiFreechatMutationBody = BodyType<AiFreeChatBody>;
+export type AiFreechatMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Free narrative chat with AEVIUM
+ */
+export const useAiFreechat = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof aiFreechat>>,
+    TError,
+    { data: BodyType<AiFreeChatBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof aiFreechat>>,
+  TError,
+  { data: BodyType<AiFreeChatBody> },
+  TContext
+> => {
+  return useMutation(getAiFreechatMutationOptions(options));
+};
+
+/**
+ * @summary List continuity alerts for a project
+ */
+export const getListContinuityAlertsUrl = (
+  projectId: number,
+  params?: ListContinuityAlertsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/projects/${projectId}/continuity-alerts?${stringifiedParams}`
+    : `/api/projects/${projectId}/continuity-alerts`;
+};
+
+export const listContinuityAlerts = async (
+  projectId: number,
+  params?: ListContinuityAlertsParams,
+  options?: RequestInit,
+): Promise<ContinuityAlert[]> => {
+  return customFetch<ContinuityAlert[]>(
+    getListContinuityAlertsUrl(projectId, params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getListContinuityAlertsQueryKey = (
+  projectId: number,
+  params?: ListContinuityAlertsParams,
+) => {
+  return [
+    `/api/projects/${projectId}/continuity-alerts`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getListContinuityAlertsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listContinuityAlerts>>,
+  TError = ErrorType<unknown>,
+>(
+  projectId: number,
+  params?: ListContinuityAlertsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listContinuityAlerts>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getListContinuityAlertsQueryKey(projectId, params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listContinuityAlerts>>
+  > = ({ signal }) =>
+    listContinuityAlerts(projectId, params, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!projectId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof listContinuityAlerts>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListContinuityAlertsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listContinuityAlerts>>
+>;
+export type ListContinuityAlertsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List continuity alerts for a project
+ */
+
+export function useListContinuityAlerts<
+  TData = Awaited<ReturnType<typeof listContinuityAlerts>>,
+  TError = ErrorType<unknown>,
+>(
+  projectId: number,
+  params?: ListContinuityAlertsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listContinuityAlerts>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListContinuityAlertsQueryOptions(
+    projectId,
+    params,
+    options,
+  );
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Resolve a continuity alert
+ */
+export const getResolveContinuityAlertUrl = (projectId: number, id: number) => {
+  return `/api/projects/${projectId}/continuity-alerts/${id}/resolve`;
+};
+
+export const resolveContinuityAlert = async (
+  projectId: number,
+  id: number,
+  options?: RequestInit,
+): Promise<ContinuityAlert> => {
+  return customFetch<ContinuityAlert>(
+    getResolveContinuityAlertUrl(projectId, id),
+    {
+      ...options,
+      method: "PATCH",
+    },
+  );
+};
+
+export const getResolveContinuityAlertMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof resolveContinuityAlert>>,
+    TError,
+    { projectId: number; id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof resolveContinuityAlert>>,
+  TError,
+  { projectId: number; id: number },
+  TContext
+> => {
+  const mutationKey = ["resolveContinuityAlert"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof resolveContinuityAlert>>,
+    { projectId: number; id: number }
+  > = (props) => {
+    const { projectId, id } = props ?? {};
+
+    return resolveContinuityAlert(projectId, id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ResolveContinuityAlertMutationResult = NonNullable<
+  Awaited<ReturnType<typeof resolveContinuityAlert>>
+>;
+
+export type ResolveContinuityAlertMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Resolve a continuity alert
+ */
+export const useResolveContinuityAlert = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof resolveContinuityAlert>>,
+    TError,
+    { projectId: number; id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof resolveContinuityAlert>>,
+  TError,
+  { projectId: number; id: number },
+  TContext
+> => {
+  return useMutation(getResolveContinuityAlertMutationOptions(options));
 };

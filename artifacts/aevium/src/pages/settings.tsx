@@ -1,5 +1,6 @@
 import { useI18n } from "@/lib/i18n";
 import { ThemeToggle, LangToggle } from "@/components/navigation/ThemeLangToggle";
+import { AiSettingsSection } from "@/components/settings/AiSettingsSection";
 
 export default function SettingsPage() {
   const { t } = useI18n();
@@ -30,6 +31,8 @@ export default function SettingsPage() {
             <LangToggle />
           </div>
         </section>
+
+        <AiSettingsSection />
       </div>
     </div>
   );

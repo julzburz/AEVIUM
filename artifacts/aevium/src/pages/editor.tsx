@@ -285,7 +285,11 @@ export default function Editor() {
             </Button>
           </div>
           <div className="flex-1 overflow-hidden flex flex-col">
-            <RightPanel projectId={id} />
+            <RightPanel
+              projectId={id}
+              sceneId={selectedSceneId ?? undefined}
+              chapterId={selectedChapterId ?? undefined}
+            />
           </div>
         </div>
       ) : (

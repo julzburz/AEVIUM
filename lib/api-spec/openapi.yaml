@@ -32,6 +32,12 @@ tags:
     description: Writing style guides
   - name: dashboard
     description: Dashboard summary data
+  - name: ai
+    description: AI writing assistant actions
+  - name: aiCredentials
+    description: AI provider credential management
+  - name: continuityAlerts
+    description: Continuity alert management
 
 paths:
   /healthz:
@@ -1024,6 +1030,261 @@ paths:
               schema:
                 $ref: "#/components/schemas/StyleGuide"
 
+  # ── AI Credentials ─────────────────────────────────────────────────────────
+  /projects/{projectId}/ai-credentials:
+    get:
+      operationId: listAiCredentials
+      tags: [aiCredentials]
+      summary: List AI provider credentials for a project
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of AI credentials (secrets never returned)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AiCredential"
+    post:
+      operationId: createAiCredential
+      tags: [aiCredentials]
+      summary: Create AI provider credential
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAiCredentialBody"
+      responses:
+        "201":
+          description: Created credential
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiCredential"
+
+  /projects/{projectId}/ai-credentials/{id}:
+    delete:
+      operationId: deleteAiCredential
+      tags: [aiCredentials]
+      summary: Delete an AI credential
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /projects/{projectId}/ai-credentials/test:
+    post:
+      operationId: testAiCredential
+      tags: [aiCredentials]
+      summary: Test an AI provider credential
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TestAiCredentialBody"
+      responses:
+        "200":
+          description: Test result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiCredentialTestResult"
+
+  # ── AI Actions ─────────────────────────────────────────────────────────────
+  /ai/continue-scene:
+    post:
+      operationId: aiContinueScene
+      tags: [ai]
+      summary: Continue a scene using AI
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AiContinueSceneBody"
+      responses:
+        "200":
+          description: AI generation result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiGenerationResult"
+
+  /ai/rewrite-selection:
+    post:
+      operationId: aiRewriteSelection
+      tags: [ai]
+      summary: Rewrite a selected passage using AI
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AiRewriteSelectionBody"
+      responses:
+        "200":
+          description: AI rewrite result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiGenerationResult"
+
+  /ai/review-coherence:
+    post:
+      operationId: aiReviewCoherence
+      tags: [ai]
+      summary: Review scene coherence against canonical memory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AiReviewCoherenceBody"
+      responses:
+        "200":
+          description: Coherence review result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiCoherenceResult"
+
+  /ai/extract-memory:
+    post:
+      operationId: aiExtractMemory
+      tags: [ai]
+      summary: Extract memory elements from generated text
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AiExtractMemoryBody"
+      responses:
+        "200":
+          description: Extracted memory suggestions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiExtractMemoryResult"
+
+  /ai/check-contradiction:
+    post:
+      operationId: aiCheckContradiction
+      tags: [ai]
+      summary: Check instruction against canonical memory for contradictions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AiCheckContradictionBody"
+      responses:
+        "200":
+          description: Contradiction check result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiContradictionResult"
+
+  /ai/free-chat:
+    post:
+      operationId: aiFreechat
+      tags: [ai]
+      summary: Free narrative chat with AEVIUM
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AiFreeChatBody"
+      responses:
+        "200":
+          description: AI chat response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiGenerationResult"
+
+  # ── Continuity Alerts ─────────────────────────────────────────────────────
+  /projects/{projectId}/continuity-alerts:
+    get:
+      operationId: listContinuityAlerts
+      tags: [continuityAlerts]
+      summary: List continuity alerts for a project
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: sceneId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of continuity alerts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ContinuityAlert"
+
+  /projects/{projectId}/continuity-alerts/{id}/resolve:
+    patch:
+      operationId: resolveContinuityAlert
+      tags: [continuityAlerts]
+      summary: Resolve a continuity alert
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Resolved alert
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContinuityAlert"
+
 components:
   schemas:
     HealthStatus:
@@ -1877,3 +2138,234 @@ components:
           type: ["string", "null"]
         additionalNotes:
           type: ["string", "null"]
+
+    # ── AI Schemas ────────────────────────────────────────────────────────────
+    AiCredential:
+      type: object
+      properties:
+        id:
+          type: integer
+        projectId:
+          type: ["integer", "null"]
+        provider:
+          type: string
+          enum: [openai, anthropic, gemini, mistral, replit]
+        model:
+          type: ["string", "null"]
+        isDefault:
+          type: boolean
+        hasSecret:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, provider, isDefault, hasSecret, createdAt]
+
+    CreateAiCredentialBody:
+      type: object
+      properties:
+        provider:
+          type: string
+          enum: [openai, anthropic, gemini, mistral, replit]
+        model:
+          type: ["string", "null"]
+        secret:
+          type: ["string", "null"]
+        isDefault:
+          type: boolean
+      required: [provider]
+
+    TestAiCredentialBody:
+      type: object
+      properties:
+        provider:
+          type: string
+          enum: [openai, anthropic, gemini, mistral, replit]
+        secret:
+          type: ["string", "null"]
+      required: [provider]
+
+    AiCredentialTestResult:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        message:
+          type: string
+      required: [ok, message]
+
+    AiGenerationResult:
+      type: object
+      properties:
+        text:
+          type: string
+        contextSummary:
+          type: ["string", "null"]
+        sceneVersionId:
+          type: ["integer", "null"]
+      required: [text]
+
+    AiCoherenceResult:
+      type: object
+      properties:
+        issues:
+          type: array
+          items:
+            $ref: "#/components/schemas/AiIssue"
+        summary:
+          type: string
+      required: [issues, summary]
+
+    AiIssue:
+      type: object
+      properties:
+        type:
+          type: string
+        description:
+          type: string
+        suggestion:
+          type: ["string", "null"]
+      required: [type, description]
+
+    AiExtractMemoryResult:
+      type: object
+      properties:
+        suggestions:
+          type: array
+          items:
+            $ref: "#/components/schemas/AiMemorySuggestion"
+      required: [suggestions]
+
+    AiMemorySuggestion:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [event, injury, secret, relationship, death, promise, mystery, location_change, knowledge, other]
+        title:
+          type: string
+        content:
+          type: string
+        confidence:
+          type: integer
+      required: [type, title, content, confidence]
+
+    AiContradictionResult:
+      type: object
+      properties:
+        hasContradiction:
+          type: boolean
+        contradictions:
+          type: array
+          items:
+            $ref: "#/components/schemas/AiContradiction"
+      required: [hasContradiction, contradictions]
+
+    AiContradiction:
+      type: object
+      properties:
+        description:
+          type: string
+        conflictingMemory:
+          type: string
+        options:
+          type: array
+          items:
+            type: string
+      required: [description, conflictingMemory, options]
+
+    AiContinueSceneBody:
+      type: object
+      properties:
+        sceneId:
+          type: integer
+        chapterId:
+          type: integer
+        projectId:
+          type: integer
+        instruction:
+          type: ["string", "null"]
+      required: [sceneId, chapterId, projectId]
+
+    AiRewriteSelectionBody:
+      type: object
+      properties:
+        sceneId:
+          type: integer
+        chapterId:
+          type: integer
+        projectId:
+          type: integer
+        selectedText:
+          type: string
+        instruction:
+          type: string
+      required: [sceneId, chapterId, projectId, selectedText, instruction]
+
+    AiReviewCoherenceBody:
+      type: object
+      properties:
+        sceneId:
+          type: integer
+        chapterId:
+          type: integer
+        projectId:
+          type: integer
+      required: [sceneId, chapterId, projectId]
+
+    AiExtractMemoryBody:
+      type: object
+      properties:
+        projectId:
+          type: integer
+        text:
+          type: string
+        sceneId:
+          type: ["integer", "null"]
+      required: [projectId, text]
+
+    AiCheckContradictionBody:
+      type: object
+      properties:
+        projectId:
+          type: integer
+        instruction:
+          type: string
+      required: [projectId, instruction]
+
+    AiFreeChatBody:
+      type: object
+      properties:
+        sceneId:
+          type: ["integer", "null"]
+        chapterId:
+          type: ["integer", "null"]
+        projectId:
+          type: integer
+        message:
+          type: string
+      required: [projectId, message]
+
+    ContinuityAlert:
+      type: object
+      properties:
+        id:
+          type: integer
+        projectId:
+          type: integer
+        sceneId:
+          type: ["integer", "null"]
+        message:
+          type: string
+        severity:
+          type: string
+          enum: [info, warning, error]
+        isResolved:
+          type: boolean
+        resolvedAt:
+          type: ["string", "null"]
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, projectId, message, severity, isResolved, createdAt]

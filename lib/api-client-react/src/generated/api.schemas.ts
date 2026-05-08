@@ -899,3 +899,195 @@ export interface UpsertStyleGuideBody {
   /** @nullable */
   additionalNotes?: string | null;
 }
+
+export type AiCredentialProvider =
+  (typeof AiCredentialProvider)[keyof typeof AiCredentialProvider];
+
+export const AiCredentialProvider = {
+  openai: "openai",
+  anthropic: "anthropic",
+  gemini: "gemini",
+  mistral: "mistral",
+  replit: "replit",
+} as const;
+
+export interface AiCredential {
+  id: number;
+  /** @nullable */
+  projectId?: number | null;
+  provider: AiCredentialProvider;
+  /** @nullable */
+  model?: string | null;
+  isDefault: boolean;
+  hasSecret: boolean;
+  createdAt: string;
+}
+
+export type CreateAiCredentialBodyProvider =
+  (typeof CreateAiCredentialBodyProvider)[keyof typeof CreateAiCredentialBodyProvider];
+
+export const CreateAiCredentialBodyProvider = {
+  openai: "openai",
+  anthropic: "anthropic",
+  gemini: "gemini",
+  mistral: "mistral",
+  replit: "replit",
+} as const;
+
+export interface CreateAiCredentialBody {
+  provider: CreateAiCredentialBodyProvider;
+  /** @nullable */
+  model?: string | null;
+  /** @nullable */
+  secret?: string | null;
+  isDefault?: boolean;
+}
+
+export type TestAiCredentialBodyProvider =
+  (typeof TestAiCredentialBodyProvider)[keyof typeof TestAiCredentialBodyProvider];
+
+export const TestAiCredentialBodyProvider = {
+  openai: "openai",
+  anthropic: "anthropic",
+  gemini: "gemini",
+  mistral: "mistral",
+  replit: "replit",
+} as const;
+
+export interface TestAiCredentialBody {
+  provider: TestAiCredentialBodyProvider;
+  /** @nullable */
+  secret?: string | null;
+}
+
+export interface AiCredentialTestResult {
+  ok: boolean;
+  message: string;
+}
+
+export interface AiGenerationResult {
+  text: string;
+  /** @nullable */
+  contextSummary?: string | null;
+  /** @nullable */
+  sceneVersionId?: number | null;
+}
+
+export interface AiIssue {
+  type: string;
+  description: string;
+  /** @nullable */
+  suggestion?: string | null;
+}
+
+export interface AiCoherenceResult {
+  issues: AiIssue[];
+  summary: string;
+}
+
+export type AiMemorySuggestionType =
+  (typeof AiMemorySuggestionType)[keyof typeof AiMemorySuggestionType];
+
+export const AiMemorySuggestionType = {
+  event: "event",
+  injury: "injury",
+  secret: "secret",
+  relationship: "relationship",
+  death: "death",
+  promise: "promise",
+  mystery: "mystery",
+  location_change: "location_change",
+  knowledge: "knowledge",
+  other: "other",
+} as const;
+
+export interface AiMemorySuggestion {
+  type: AiMemorySuggestionType;
+  title: string;
+  content: string;
+  confidence: number;
+}
+
+export interface AiExtractMemoryResult {
+  suggestions: AiMemorySuggestion[];
+}
+
+export interface AiContradiction {
+  description: string;
+  conflictingMemory: string;
+  options: string[];
+}
+
+export interface AiContradictionResult {
+  hasContradiction: boolean;
+  contradictions: AiContradiction[];
+}
+
+export interface AiContinueSceneBody {
+  sceneId: number;
+  chapterId: number;
+  projectId: number;
+  /** @nullable */
+  instruction?: string | null;
+}
+
+export interface AiRewriteSelectionBody {
+  sceneId: number;
+  chapterId: number;
+  projectId: number;
+  selectedText: string;
+  instruction: string;
+}
+
+export interface AiReviewCoherenceBody {
+  sceneId: number;
+  chapterId: number;
+  projectId: number;
+}
+
+export interface AiExtractMemoryBody {
+  projectId: number;
+  text: string;
+  /** @nullable */
+  sceneId?: number | null;
+}
+
+export interface AiCheckContradictionBody {
+  projectId: number;
+  instruction: string;
+}
+
+export interface AiFreeChatBody {
+  /** @nullable */
+  sceneId?: number | null;
+  /** @nullable */
+  chapterId?: number | null;
+  projectId: number;
+  message: string;
+}
+
+export type ContinuityAlertSeverity =
+  (typeof ContinuityAlertSeverity)[keyof typeof ContinuityAlertSeverity];
+
+export const ContinuityAlertSeverity = {
+  info: "info",
+  warning: "warning",
+  error: "error",
+} as const;
+
+export interface ContinuityAlert {
+  id: number;
+  projectId: number;
+  /** @nullable */
+  sceneId?: number | null;
+  message: string;
+  severity: ContinuityAlertSeverity;
+  isResolved: boolean;
+  /** @nullable */
+  resolvedAt?: string | null;
+  createdAt: string;
+}
+
+export type ListContinuityAlertsParams = {
+  sceneId?: number;
+};

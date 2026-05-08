@@ -13,6 +13,9 @@ import timelineRouter from "./timeline";
 import styleGuideRouter from "./styleGuide";
 import profileRouter from "./profile";
 import sceneVersionsRouter from "./sceneVersions";
+import aiRouter from "./ai";
+import aiCredentialsRouter from "./aiCredentials";
+import continuityAlertsRouter from "./continuityAlerts";
 
 const router: IRouter = Router();
 
@@ -30,5 +33,8 @@ router.use(memoryRouter);
 router.use(timelineRouter);
 router.use(styleGuideRouter);
 router.use(sceneVersionsRouter);
+router.use(aiRouter);
+router.use(aiCredentialsRouter);
+router.use(continuityAlertsRouter);
 
 export default router;

@@ -5,14 +5,20 @@ import { MemoryPanel } from "./MemoryPanel";
 import { TimelinePanel } from "./TimelinePanel";
 import { StylePanel } from "./StylePanel";
 import { NotesPanel } from "./NotesPanel";
+import { AiPanel } from "./AiPanel";
+import { ContinuityPanel } from "./ContinuityPanel";
 
 type RightTab = "ai" | "memory" | "continuity" | "timeline" | "style" | "notes";
 
 interface RightPanelProps {
   projectId: number;
+  sceneId?: number;
+  chapterId?: number;
+  onInsertText?: (text: string) => void;
+  selectedText?: string;
 }
 
-export function RightPanel({ projectId }: RightPanelProps) {
+export function RightPanel({ projectId, sceneId, chapterId, onInsertText, selectedText }: RightPanelProps) {
   const { t } = useI18n();
   const [tab, setTab] = useState<RightTab>("memory");
 
@@ -47,27 +53,22 @@ export function RightPanel({ projectId }: RightPanelProps) {
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto p-3">
+      <div className="flex-1 overflow-hidden p-3">
         {tab === "ai" && (
-          <div className="flex flex-col items-center justify-center h-full text-center py-8" data-testid="panel-ai">
-            <Bot className="w-10 h-10 text-primary/30 mb-3" />
-            <p className="text-sm text-muted-foreground">{t('editor.noAi')}</p>
-          </div>
+          <AiPanel
+            projectId={projectId}
+            sceneId={sceneId}
+            chapterId={chapterId}
+            onInsertText={onInsertText}
+            selectedText={selectedText}
+          />
         )}
-
         {tab === "memory" && <MemoryPanel projectId={projectId} />}
-
         {tab === "continuity" && (
-          <div className="flex flex-col items-center justify-center h-full text-center py-8" data-testid="panel-continuity">
-            <AlertTriangle className="w-10 h-10 text-secondary/40 mb-3" />
-            <p className="text-sm text-muted-foreground">{t('editor.noContinuity')}</p>
-          </div>
+          <ContinuityPanel projectId={projectId} sceneId={sceneId} />
         )}
-
         {tab === "timeline" && <TimelinePanel projectId={projectId} />}
-
         {tab === "style" && <StylePanel projectId={projectId} />}
-
         {tab === "notes" && <NotesPanel projectId={projectId} />}
       </div>
     </div>

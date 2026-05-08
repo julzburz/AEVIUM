@@ -1073,3 +1073,225 @@ export const UpsertStyleGuideResponse = zod.object({
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
 });
+
+/**
+ * @summary List AI provider credentials for a project
+ */
+export const ListAiCredentialsParams = zod.object({
+  projectId: zod.coerce.number(),
+});
+
+export const ListAiCredentialsResponseItem = zod.object({
+  id: zod.number(),
+  projectId: zod.number().nullish(),
+  provider: zod.enum(["openai", "anthropic", "gemini", "mistral", "replit"]),
+  model: zod.string().nullish(),
+  isDefault: zod.boolean(),
+  hasSecret: zod.boolean(),
+  createdAt: zod.coerce.date(),
+});
+export const ListAiCredentialsResponse = zod.array(
+  ListAiCredentialsResponseItem,
+);
+
+/**
+ * @summary Create AI provider credential
+ */
+export const CreateAiCredentialParams = zod.object({
+  projectId: zod.coerce.number(),
+});
+
+export const CreateAiCredentialBody = zod.object({
+  provider: zod.enum(["openai", "anthropic", "gemini", "mistral", "replit"]),
+  model: zod.string().nullish(),
+  secret: zod.string().nullish(),
+  isDefault: zod.boolean().optional(),
+});
+
+/**
+ * @summary Delete an AI credential
+ */
+export const DeleteAiCredentialParams = zod.object({
+  projectId: zod.coerce.number(),
+  id: zod.coerce.number(),
+});
+
+/**
+ * @summary Test an AI provider credential
+ */
+export const TestAiCredentialParams = zod.object({
+  projectId: zod.coerce.number(),
+});
+
+export const TestAiCredentialBody = zod.object({
+  provider: zod.enum(["openai", "anthropic", "gemini", "mistral", "replit"]),
+  secret: zod.string().nullish(),
+});
+
+export const TestAiCredentialResponse = zod.object({
+  ok: zod.boolean(),
+  message: zod.string(),
+});
+
+/**
+ * @summary Continue a scene using AI
+ */
+export const AiContinueSceneBody = zod.object({
+  sceneId: zod.number(),
+  chapterId: zod.number(),
+  projectId: zod.number(),
+  instruction: zod.string().nullish(),
+});
+
+export const AiContinueSceneResponse = zod.object({
+  text: zod.string(),
+  contextSummary: zod.string().nullish(),
+  sceneVersionId: zod.number().nullish(),
+});
+
+/**
+ * @summary Rewrite a selected passage using AI
+ */
+export const AiRewriteSelectionBody = zod.object({
+  sceneId: zod.number(),
+  chapterId: zod.number(),
+  projectId: zod.number(),
+  selectedText: zod.string(),
+  instruction: zod.string(),
+});
+
+export const AiRewriteSelectionResponse = zod.object({
+  text: zod.string(),
+  contextSummary: zod.string().nullish(),
+  sceneVersionId: zod.number().nullish(),
+});
+
+/**
+ * @summary Review scene coherence against canonical memory
+ */
+export const AiReviewCoherenceBody = zod.object({
+  sceneId: zod.number(),
+  chapterId: zod.number(),
+  projectId: zod.number(),
+});
+
+export const AiReviewCoherenceResponse = zod.object({
+  issues: zod.array(
+    zod.object({
+      type: zod.string(),
+      description: zod.string(),
+      suggestion: zod.string().nullish(),
+    }),
+  ),
+  summary: zod.string(),
+});
+
+/**
+ * @summary Extract memory elements from generated text
+ */
+export const AiExtractMemoryBody = zod.object({
+  projectId: zod.number(),
+  text: zod.string(),
+  sceneId: zod.number().nullish(),
+});
+
+export const AiExtractMemoryResponse = zod.object({
+  suggestions: zod.array(
+    zod.object({
+      type: zod.enum([
+        "event",
+        "injury",
+        "secret",
+        "relationship",
+        "death",
+        "promise",
+        "mystery",
+        "location_change",
+        "knowledge",
+        "other",
+      ]),
+      title: zod.string(),
+      content: zod.string(),
+      confidence: zod.number(),
+    }),
+  ),
+});
+
+/**
+ * @summary Check instruction against canonical memory for contradictions
+ */
+export const AiCheckContradictionBody = zod.object({
+  projectId: zod.number(),
+  instruction: zod.string(),
+});
+
+export const AiCheckContradictionResponse = zod.object({
+  hasContradiction: zod.boolean(),
+  contradictions: zod.array(
+    zod.object({
+      description: zod.string(),
+      conflictingMemory: zod.string(),
+      options: zod.array(zod.string()),
+    }),
+  ),
+});
+
+/**
+ * @summary Free narrative chat with AEVIUM
+ */
+export const AiFreechatBody = zod.object({
+  sceneId: zod.number().nullish(),
+  chapterId: zod.number().nullish(),
+  projectId: zod.number(),
+  message: zod.string(),
+});
+
+export const AiFreechatResponse = zod.object({
+  text: zod.string(),
+  contextSummary: zod.string().nullish(),
+  sceneVersionId: zod.number().nullish(),
+});
+
+/**
+ * @summary List continuity alerts for a project
+ */
+export const ListContinuityAlertsParams = zod.object({
+  projectId: zod.coerce.number(),
+});
+
+export const ListContinuityAlertsQueryParams = zod.object({
+  sceneId: zod.coerce.number().optional(),
+});
+
+export const ListContinuityAlertsResponseItem = zod.object({
+  id: zod.number(),
+  projectId: zod.number(),
+  sceneId: zod.number().nullish(),
+  message: zod.string(),
+  severity: zod.enum(["info", "warning", "error"]),
+  isResolved: zod.boolean(),
+  resolvedAt: zod.coerce.date().nullish(),
+  createdAt: zod.coerce.date(),
+});
+export const ListContinuityAlertsResponse = zod.array(
+  ListContinuityAlertsResponseItem,
+);
+
+/**
+ * @summary Resolve a continuity alert
+ */
+export const ResolveContinuityAlertParams = zod.object({
+  projectId: zod.coerce.number(),
+  id: zod.coerce.number(),
+});
+
+export const ResolveContinuityAlertResponse = zod.object({
+  id: zod.number(),
+  projectId: zod.number(),
+  sceneId: zod.number().nullish(),
+  message: zod.string(),
+  severity: zod.enum(["info", "warning", "error"]),
+  isResolved: zod.boolean(),
+  resolvedAt: zod.coerce.date().nullish(),
+  createdAt: zod.coerce.date(),
+});

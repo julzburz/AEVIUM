@@ -1,7 +1,7 @@
 import { pgTable, serial, text, timestamp, integer, boolean, pgEnum } from "drizzle-orm/pg-core";
 import { projectsTable } from "./projects";
 
-export const aiProviderEnum = pgEnum("ai_provider", ["openai", "anthropic", "gemini", "mistral"]);
+export const aiProviderEnum = pgEnum("ai_provider", ["openai", "anthropic", "gemini", "mistral", "replit"]);
 
 export const aiCredentialsTable = pgTable("ai_credentials", {
   id: serial("id").primaryKey(),
