@@ -12,6 +12,7 @@ import memoryRouter from "./memory";
 import timelineRouter from "./timeline";
 import styleGuideRouter from "./styleGuide";
 import profileRouter from "./profile";
+import sceneVersionsRouter from "./sceneVersions";
 
 const router: IRouter = Router();
 
@@ -28,5 +29,6 @@ router.use(worldRulesRouter);
 router.use(memoryRouter);
 router.use(timelineRouter);
 router.use(styleGuideRouter);
+router.use(sceneVersionsRouter);
 
 export default router;

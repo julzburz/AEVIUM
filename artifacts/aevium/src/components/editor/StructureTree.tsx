@@ -30,7 +30,8 @@ interface StructureTreeProps {
     chapterId: number,
     bookTitle: string,
     chapterTitle: string,
-    sceneTitle: string
+    sceneTitle: string,
+    bookId: number,
   ) => void;
 }
 
@@ -153,7 +154,7 @@ function ChapterRow({
                 className={`group flex items-center gap-1.5 px-2 py-1.5 rounded-md cursor-pointer select-none ${
                   selectedSceneId === scene.id ? "bg-primary/10 text-primary" : "hover:bg-muted/50 text-muted-foreground"
                 }`}
-                onClick={() => onSelectScene(scene.id, chapter.id, book.title, chapter.title, scene.title)}
+                onClick={() => onSelectScene(scene.id, chapter.id, book.title, chapter.title, scene.title, book.id)}
                 data-testid={`tree-scene-${scene.id}`}
               >
                 <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotClass}`} title={t(`editor.${statusKey}` as Parameters<typeof t>[0])} />
