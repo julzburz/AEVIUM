@@ -120,18 +120,24 @@ router.patch("/chapters/:chapterId/scenes/:id", requireAuth, async (req, res): P
     return;
   }
 
-  const updateData: Record<string, any> = { ...parsed.data, updatedAt: new Date() };
-  if (parsed.data.content !== undefined && parsed.data.wordCount === undefined) {
-    updateData.wordCount = parsed.data.content
-      ? parsed.data.content.split(/\s+/).filter(Boolean).length
-      : 0;
-  }
+  const incomingContent = parsed.data.content;
+  const computedWordCount =
+    incomingContent !== undefined && parsed.data.wordCount === undefined
+      ? incomingContent
+        ? incomingContent.split(/\s+/).filter(Boolean).length
+        : 0
+      : parsed.data.wordCount;
 
   const [scene] = await db
     .update(scenesTable)
-    .set(updateData)
+    .set({
+      ...parsed.data,
+      wordCount: computedWordCount,
+      updatedAt: new Date(),
+    })
     .where(and(eq(scenesTable.id, params.data.id), eq(scenesTable.chapterId, params.data.chapterId)))
     .returning();
+
   if (!scene) {
     res.status(404).json({ error: "Scene not found" });
     return;

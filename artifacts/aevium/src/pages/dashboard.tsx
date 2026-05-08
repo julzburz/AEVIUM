@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useGetDashboard, getGetDashboardQueryKey, useCreateProject } from "@workspace/api-client-react";
 import { useI18n } from "@/lib/i18n";
 import { Link, useLocation } from "wouter";
 import { formatDistanceToNow } from "date-fns";
-import { BookOpen, FileText, Plus, Layout, History } from "lucide-react";
+import { BookOpen, FileText, Plus, Layout, History, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -31,9 +31,11 @@ export default function Dashboard() {
   const [newProjectName, setNewProjectName] = useState("");
   const [newProjectType, setNewProjectType] = useState<ProjectType>("novel");
 
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterType, setFilterType] = useState<ProjectType | "all">("all");
+
   const handleCreateProject = () => {
     if (!newProjectName.trim()) return;
-
     createProject.mutate({
       data: {
         name: newProjectName,
@@ -55,6 +57,18 @@ export default function Dashboard() {
     });
   };
 
+  const allProjects = dashboard?.projects ?? [];
+
+  const filteredProjects = useMemo(() => {
+    return allProjects.filter((p) => {
+      const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesType = filterType === "all" || p.type === filterType;
+      return matchesSearch && matchesType;
+    });
+  }, [allProjects, searchQuery, filterType]);
+
+  const recentActivity = dashboard?.recentActivity ?? [];
+
   if (isLoading) {
     return (
       <div className="container py-8 space-y-8">
@@ -71,13 +85,12 @@ export default function Dashboard() {
     );
   }
 
-  const projects = dashboard?.projects || [];
-  const recentActivity = dashboard?.recentActivity || [];
-
   return (
     <div className="container py-8">
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold tracking-tight" data-testid="text-dashboard-title">{t('dashboard.title')}</h1>
+        <h1 className="text-3xl font-bold tracking-tight" data-testid="text-dashboard-title">
+          {t('dashboard.title')}
+        </h1>
         <Dialog open={isCreating} onOpenChange={setIsCreating}>
           <DialogTrigger asChild>
             <Button className="gap-2" data-testid="button-new-project">
@@ -137,7 +150,35 @@ export default function Dashboard() {
         </Dialog>
       </div>
 
-      {projects.length === 0 ? (
+      {allProjects.length > 0 && (
+        <div className="flex gap-3 mb-6">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              className="pl-9"
+              placeholder={t('dashboard.search')}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              data-testid="input-search-projects"
+            />
+          </div>
+          <Select value={filterType} onValueChange={(v: ProjectType | "all") => setFilterType(v)}>
+            <SelectTrigger className="w-44" data-testid="select-filter-type">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('dashboard.filterAll')}</SelectItem>
+              <SelectItem value="novel">{t('dashboard.type.novel')}</SelectItem>
+              <SelectItem value="saga">{t('dashboard.type.saga')}</SelectItem>
+              <SelectItem value="screenplay">{t('dashboard.type.screenplay')}</SelectItem>
+              <SelectItem value="articles">{t('dashboard.type.articles')}</SelectItem>
+              <SelectItem value="other">{t('dashboard.type.other')}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {filteredProjects.length === 0 && allProjects.length === 0 ? (
         <div className="text-center py-20 bg-muted/30 rounded-xl border border-dashed" data-testid="status-empty-projects">
           <Layout className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
           <h3 className="text-lg font-medium mb-2">{t('dashboard.empty')}</h3>
@@ -147,8 +188,12 @@ export default function Dashboard() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-          {projects.map((project) => (
-            <Card key={project.id} className="hover:border-primary/50 transition-colors flex flex-col" data-testid={`card-project-${project.id}`}>
+          {filteredProjects.map((project) => (
+            <Card
+              key={project.id}
+              className="hover:border-primary/50 transition-colors flex flex-col"
+              data-testid={`card-project-${project.id}`}
+            >
               <CardHeader className="pb-4">
                 <div className="flex justify-between items-start">
                   <div>
@@ -200,7 +245,11 @@ export default function Dashboard() {
           </h2>
           <div className="space-y-4">
             {recentActivity.map((activity, i) => (
-              <div key={i} className="flex items-start gap-4 p-4 rounded-lg border bg-card text-sm" data-testid={`row-activity-${i}`}>
+              <div
+                key={i}
+                className="flex items-start gap-4 p-4 rounded-lg border bg-card text-sm"
+                data-testid={`row-activity-${i}`}
+              >
                 <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
                   <FileText className="w-4 h-4" />
                 </div>

@@ -1,9 +1,9 @@
 import { useState, useCallback } from "react";
-import { Link, useLocation } from "wouter";
+import { Link } from "wouter";
 import { useParams } from "wouter";
 import { useGetProject, getGetProjectQueryKey } from "@workspace/api-client-react";
 import { useI18n } from "@/lib/i18n";
-import { Settings, PanelLeftClose, PanelRightClose, PanelLeft, PanelRight } from "lucide-react";
+import { Settings, PanelLeftClose, PanelRightClose, PanelLeft, PanelRight, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StructureTree } from "@/components/editor/StructureTree";
 import { SceneEditor } from "@/components/editor/SceneEditor";
@@ -13,21 +13,32 @@ export default function Editor() {
   const { id: rawId } = useParams();
   const id = Number(rawId);
   const { t } = useI18n();
-  const [, setLocation] = useLocation();
 
   const [leftOpen, setLeftOpen] = useState(true);
   const [rightOpen, setRightOpen] = useState(true);
   const [selectedSceneId, setSelectedSceneId] = useState<number | null>(null);
   const [selectedChapterId, setSelectedChapterId] = useState<number | null>(null);
+  const [selectedBookTitle, setSelectedBookTitle] = useState<string | null>(null);
+  const [selectedChapterTitle, setSelectedChapterTitle] = useState<string | null>(null);
+  const [selectedSceneTitle, setSelectedSceneTitle] = useState<string | null>(null);
   const [wordCount, setWordCount] = useState(0);
 
   const { data: project, isLoading: projectLoading } = useGetProject(id, {
     query: { enabled: !!id, queryKey: getGetProjectQueryKey(id) }
   });
 
-  const handleSelectScene = useCallback((sceneId: number, chapterId: number) => {
+  const handleSelectScene = useCallback((
+    sceneId: number,
+    chapterId: number,
+    bookTitle: string,
+    chapterTitle: string,
+    sceneTitle: string,
+  ) => {
     setSelectedSceneId(sceneId);
     setSelectedChapterId(chapterId);
+    setSelectedBookTitle(bookTitle);
+    setSelectedChapterTitle(chapterTitle);
+    setSelectedSceneTitle(sceneTitle);
   }, []);
 
   const handleWordCountChange = useCallback((count: number) => {
@@ -36,7 +47,7 @@ export default function Editor() {
 
   if (projectLoading) {
     return (
-      <div className="flex items-center justify-center h-full text-muted-foreground">
+      <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
         {t('form.saving')}
       </div>
     );
@@ -44,7 +55,7 @@ export default function Editor() {
 
   if (!project) {
     return (
-      <div className="flex items-center justify-center h-full text-muted-foreground">
+      <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
         {t('notFound.message')}
       </div>
     );
@@ -57,10 +68,9 @@ export default function Editor() {
         <div className="w-60 shrink-0 border-r border-border flex flex-col bg-card/50" data-testid="panel-structure">
           <div className="h-11 border-b flex items-center justify-between px-3 shrink-0 gap-2">
             <span
-              className="font-semibold text-sm truncate cursor-pointer hover:underline text-foreground"
-              onClick={() => setLocation(`/projects/${id}`)}
-              data-testid="text-project-name"
+              className="font-semibold text-sm truncate text-foreground"
               title={project.name}
+              data-testid="text-project-name-left"
             >
               {project.name}
             </span>
@@ -90,7 +100,6 @@ export default function Editor() {
           <StructureTree
             projectId={id}
             selectedSceneId={selectedSceneId}
-            selectedChapterId={selectedChapterId}
             onSelectScene={handleSelectScene}
           />
         </div>
@@ -110,16 +119,34 @@ export default function Editor() {
 
       <div className="flex-1 flex flex-col min-w-0 bg-background relative" data-testid="panel-center">
         <div className="h-11 border-b flex items-center justify-between px-4 shrink-0">
-          <div className="flex items-center text-xs text-muted-foreground gap-1.5 min-w-0">
-            <span className="font-medium text-foreground truncate">
+          <div className="flex items-center text-xs text-muted-foreground gap-1 min-w-0 overflow-hidden">
+            <span className="font-medium text-foreground shrink-0" data-testid="text-breadcrumb-project">
               {project.name}
             </span>
-            {selectedSceneId && (
-              <span className="text-muted-foreground/50">/</span>
+            {selectedBookTitle && (
+              <>
+                <ChevronRight className="w-3 h-3 shrink-0 text-muted-foreground/50" />
+                <span className="shrink-0 truncate max-w-[100px]" data-testid="text-breadcrumb-book">
+                  {selectedBookTitle}
+                </span>
+              </>
             )}
-          </div>
-          <div className="flex items-center gap-4 text-xs text-muted-foreground font-mono shrink-0">
-            <span data-testid="text-word-count">{wordCount} {t('editor.words')}</span>
+            {selectedChapterTitle && (
+              <>
+                <ChevronRight className="w-3 h-3 shrink-0 text-muted-foreground/50" />
+                <span className="shrink-0 truncate max-w-[100px]" data-testid="text-breadcrumb-chapter">
+                  {selectedChapterTitle}
+                </span>
+              </>
+            )}
+            {selectedSceneTitle && (
+              <>
+                <ChevronRight className="w-3 h-3 shrink-0 text-muted-foreground/50" />
+                <span className="font-medium text-foreground shrink-0 truncate max-w-[100px]" data-testid="text-breadcrumb-scene">
+                  {selectedSceneTitle}
+                </span>
+              </>
+            )}
           </div>
         </div>
 
@@ -137,6 +164,18 @@ export default function Editor() {
             >
               <p className="text-sm max-w-xs">{t('editor.selectScene')}</p>
             </div>
+          )}
+        </div>
+
+        <div
+          className="h-8 border-t flex items-center justify-between px-4 shrink-0 text-xs text-muted-foreground bg-muted/20"
+          data-testid="status-bar"
+        >
+          <span data-testid="text-word-count">{wordCount} {t('editor.words')}</span>
+          {selectedSceneId && (
+            <span data-testid="text-scene-status">
+              {t('editor.sceneStatus')}: {t('editor.draft')}
+            </span>
           )}
         </div>
       </div>

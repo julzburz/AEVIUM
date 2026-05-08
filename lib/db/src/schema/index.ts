@@ -11,3 +11,4 @@ export * from "./styleGuides";
 export * from "./profiles";
 export * from "./sceneVersions";
 export * from "./continuityAlerts";
+export * from "./aiCredentials";

@@ -25,14 +25,18 @@ import {
 interface StructureTreeProps {
   projectId: number;
   selectedSceneId: number | null;
-  selectedChapterId: number | null;
-  onSelectScene: (sceneId: number, chapterId: number) => void;
+  onSelectScene: (
+    sceneId: number,
+    chapterId: number,
+    bookTitle: string,
+    chapterTitle: string,
+    sceneTitle: string
+  ) => void;
 }
 
 export function StructureTree({
   projectId,
   selectedSceneId,
-  selectedChapterId,
   onSelectScene,
 }: StructureTreeProps) {
   const { t } = useI18n();
@@ -41,7 +45,6 @@ export function StructureTree({
 
   const [expandedBooks, setExpandedBooks] = useState<Set<number>>(new Set());
   const [expandedChapters, setExpandedChapters] = useState<Set<number>>(new Set());
-
   const [activeBookId, setActiveBookId] = useState<number | null>(null);
   const [activeChapterId, setActiveChapterId] = useState<number | null>(null);
 
@@ -192,11 +195,8 @@ export function StructureTree({
     );
   };
 
-  const chaptersForBook = (bookId: number) =>
-    activeBookId === bookId ? chapters : [];
-
-  const scenesForChapter = (chapterId: number) =>
-    activeChapterId === chapterId ? scenes : [];
+  const chaptersForBook = (bookId: number) => activeBookId === bookId ? chapters : [];
+  const scenesForChapter = (chapterId: number) => activeChapterId === chapterId ? scenes : [];
 
   return (
     <div className="flex-1 overflow-auto p-2 text-sm">
@@ -219,8 +219,13 @@ export function StructureTree({
                   onClick={() => toggleBook(book.id)}
                   data-testid={`tree-book-${book.id}`}
                 >
-                  <button className="shrink-0 text-muted-foreground" onClick={(e) => { e.stopPropagation(); toggleBook(book.id); }}>
-                    {isBookExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                  <button
+                    className="shrink-0 text-muted-foreground"
+                    onClick={(e) => { e.stopPropagation(); toggleBook(book.id); }}
+                  >
+                    {isBookExpanded
+                      ? <ChevronDown className="w-3.5 h-3.5" />
+                      : <ChevronRight className="w-3.5 h-3.5" />}
                   </button>
                   <BookOpen className="w-3.5 h-3.5 text-primary shrink-0" />
                   <span className="flex-1 truncate font-medium text-xs">{book.title}</span>
@@ -273,7 +278,9 @@ export function StructureTree({
                               data-testid={`tree-chapter-${chapter.id}`}
                             >
                               <button className="shrink-0 text-muted-foreground">
-                                {isChapterExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                                {isChapterExpanded
+                                  ? <ChevronDown className="w-3 h-3" />
+                                  : <ChevronRight className="w-3 h-3" />}
                               </button>
                               <span className="flex-1 truncate text-xs text-muted-foreground">{chapter.title}</span>
                               <div className="opacity-0 group-hover:opacity-100 flex items-center">
@@ -321,7 +328,9 @@ export function StructureTree({
                                           ? "bg-primary/10 text-primary"
                                           : "hover:bg-muted/50 text-muted-foreground"
                                       }`}
-                                      onClick={() => onSelectScene(scene.id, chapter.id)}
+                                      onClick={() =>
+                                        onSelectScene(scene.id, chapter.id, book.title, chapter.title, scene.title)
+                                      }
                                       data-testid={`tree-scene-${scene.id}`}
                                     >
                                       <FileText className="w-3 h-3 shrink-0" />
@@ -406,14 +415,19 @@ export function StructureTree({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showNewChapterForBook !== null} onOpenChange={(o) => { if (!o) setShowNewChapterForBook(null); }}>
+      <Dialog
+        open={showNewChapterForBook !== null}
+        onOpenChange={(o) => { if (!o) setShowNewChapterForBook(null); }}
+      >
         <DialogContent>
           <DialogHeader><DialogTitle>{t('editor.newChapter')}</DialogTitle></DialogHeader>
           <Input
             autoFocus
             value={newChapterTitle}
             onChange={(e) => setNewChapterTitle(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter' && showNewChapterForBook) handleCreateChapter(showNewChapterForBook); }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && showNewChapterForBook) handleCreateChapter(showNewChapterForBook);
+            }}
             placeholder={t('editor.chapterTitle')}
             data-testid="input-new-chapter-title"
           />
@@ -430,14 +444,19 @@ export function StructureTree({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showNewSceneForChapter !== null} onOpenChange={(o) => { if (!o) setShowNewSceneForChapter(null); }}>
+      <Dialog
+        open={showNewSceneForChapter !== null}
+        onOpenChange={(o) => { if (!o) setShowNewSceneForChapter(null); }}
+      >
         <DialogContent>
           <DialogHeader><DialogTitle>{t('editor.newScene')}</DialogTitle></DialogHeader>
           <Input
             autoFocus
             value={newSceneTitle}
             onChange={(e) => setNewSceneTitle(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter' && showNewSceneForChapter) handleCreateScene(showNewSceneForChapter); }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && showNewSceneForChapter) handleCreateScene(showNewSceneForChapter);
+            }}
             placeholder={t('editor.sceneTitle')}
             data-testid="input-new-scene-title"
           />

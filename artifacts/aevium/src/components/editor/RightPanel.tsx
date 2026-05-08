@@ -6,9 +6,9 @@ import {
   useListMemoryItems, getListMemoryItemsQueryKey,
 } from "@workspace/api-client-react";
 import { useI18n } from "@/lib/i18n";
-import { Bot, Users, Map, Globe, BookMarked, AlertTriangle } from "lucide-react";
+import { Bot, Users, Map, Globe, BookMarked, AlertTriangle, Clock, Feather, StickyNote } from "lucide-react";
 
-type RightTab = "ai" | "memory" | "continuity";
+type RightTab = "ai" | "memory" | "continuity" | "timeline" | "style" | "notes";
 type MemorySubTab = "characters" | "locations" | "worldRules" | "items";
 
 interface RightPanelProps {
@@ -33,12 +33,14 @@ export function RightPanel({ projectId }: RightPanelProps) {
     query: { queryKey: getListMemoryItemsQueryKey(projectId) }
   });
 
-  const tabClass = (active: boolean) =>
-    `flex-1 py-2 text-xs font-medium transition-colors ${
-      active
-        ? "text-foreground border-b-2 border-primary"
-        : "text-muted-foreground hover:text-foreground border-b-2 border-transparent"
-    }`;
+  const topTabs: { key: RightTab; label: string; icon: React.ReactNode }[] = [
+    { key: "ai",          label: t('editor.ai'),          icon: <Bot className="w-3 h-3" /> },
+    { key: "memory",      label: t('editor.memory'),      icon: <Users className="w-3 h-3" /> },
+    { key: "continuity",  label: t('editor.continuity'),  icon: <AlertTriangle className="w-3 h-3" /> },
+    { key: "timeline",    label: t('editor.timeline'),    icon: <Clock className="w-3 h-3" /> },
+    { key: "style",       label: t('editor.style'),       icon: <Feather className="w-3 h-3" /> },
+    { key: "notes",       label: t('editor.notes'),       icon: <StickyNote className="w-3 h-3" /> },
+  ];
 
   const subTabClass = (active: boolean) =>
     `px-2 py-1 text-xs rounded transition-colors ${
@@ -48,28 +50,22 @@ export function RightPanel({ projectId }: RightPanelProps) {
   return (
     <div className="flex flex-col h-full">
       <div className="border-b shrink-0">
-        <div className="flex">
-          <button
-            className={tabClass(tab === "ai")}
-            onClick={() => setTab("ai")}
-            data-testid="tab-ai"
-          >
-            {t('editor.ai')}
-          </button>
-          <button
-            className={tabClass(tab === "memory")}
-            onClick={() => setTab("memory")}
-            data-testid="tab-memory"
-          >
-            {t('editor.memory')}
-          </button>
-          <button
-            className={tabClass(tab === "continuity")}
-            onClick={() => setTab("continuity")}
-            data-testid="tab-continuity"
-          >
-            {t('editor.continuity')}
-          </button>
+        <div className="grid grid-cols-3">
+          {topTabs.map(({ key, label, icon }) => (
+            <button
+              key={key}
+              className={`flex flex-col items-center gap-0.5 py-2 text-[10px] font-medium transition-colors border-b-2 ${
+                tab === key
+                  ? "text-foreground border-primary"
+                  : "text-muted-foreground hover:text-foreground border-transparent"
+              }`}
+              onClick={() => setTab(key)}
+              data-testid={`tab-${key}`}
+            >
+              {icon}
+              <span>{label}</span>
+            </button>
+          ))}
         </div>
       </div>
 
@@ -83,7 +79,7 @@ export function RightPanel({ projectId }: RightPanelProps) {
 
         {tab === "memory" && (
           <div data-testid="panel-memory">
-            <div className="flex gap-1 mb-3 flex-wrap">
+            <div className="flex flex-wrap gap-1 mb-3">
               <button className={subTabClass(memSubTab === "characters")} onClick={() => setMemSubTab("characters")} data-testid="subtab-characters">
                 <Users className="w-3 h-3 inline mr-1" />{t('editor.characters')}
               </button>
@@ -106,7 +102,7 @@ export function RightPanel({ projectId }: RightPanelProps) {
                   {characters.map((c) => (
                     <li key={c.id} className="p-2 rounded-md bg-muted/40 text-xs" data-testid={`item-character-${c.id}`}>
                       <p className="font-medium text-foreground">{c.name}</p>
-                      {c.role && <p className="text-muted-foreground capitalize">{c.role}</p>}
+                      <p className="text-muted-foreground capitalize">{c.role}</p>
                     </li>
                   ))}
                 </ul>
@@ -164,6 +160,27 @@ export function RightPanel({ projectId }: RightPanelProps) {
           <div className="flex flex-col items-center justify-center h-full text-center py-8" data-testid="panel-continuity">
             <AlertTriangle className="w-10 h-10 text-secondary/40 mb-3" />
             <p className="text-sm text-muted-foreground">{t('editor.noContinuity')}</p>
+          </div>
+        )}
+
+        {tab === "timeline" && (
+          <div className="flex flex-col items-center justify-center h-full text-center py-8" data-testid="panel-timeline">
+            <Clock className="w-10 h-10 text-primary/30 mb-3" />
+            <p className="text-sm text-muted-foreground">{t('editor.noTimeline')}</p>
+          </div>
+        )}
+
+        {tab === "style" && (
+          <div className="flex flex-col items-center justify-center h-full text-center py-8" data-testid="panel-style">
+            <Feather className="w-10 h-10 text-primary/30 mb-3" />
+            <p className="text-sm text-muted-foreground">{t('editor.noStyle')}</p>
+          </div>
+        )}
+
+        {tab === "notes" && (
+          <div className="flex flex-col items-center justify-center h-full text-center py-8" data-testid="panel-notes">
+            <StickyNote className="w-10 h-10 text-primary/30 mb-3" />
+            <p className="text-sm text-muted-foreground">{t('editor.noNotes')}</p>
           </div>
         )}
       </div>
