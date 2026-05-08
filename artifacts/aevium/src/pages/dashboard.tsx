@@ -3,7 +3,7 @@ import { useGetDashboard, getGetDashboardQueryKey, useCreateProject } from "@wor
 import { useI18n } from "@/lib/i18n";
 import { Link, useLocation } from "wouter";
 import { formatDistanceToNow } from "date-fns";
-import { BookOpen, FileText, Plus, MoreVertical, Layout, History } from "lucide-react";
+import { BookOpen, FileText, Plus, Layout, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -14,12 +14,14 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 
+type ProjectType = "novel" | "saga" | "articles" | "screenplay" | "other";
+
 export default function Dashboard() {
   const { t } = useI18n();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
+
   const { data: dashboard, isLoading } = useGetDashboard({
     query: { queryKey: getGetDashboardQueryKey() }
   });
@@ -27,29 +29,28 @@ export default function Dashboard() {
   const createProject = useCreateProject();
   const [isCreating, setIsCreating] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
-  const [newProjectType, setNewProjectType] = useState<"novel" | "saga" | "screenplay" | "articles" | "other">("novel");
+  const [newProjectType, setNewProjectType] = useState<ProjectType>("novel");
 
   const handleCreateProject = () => {
     if (!newProjectName.trim()) return;
-    
+
     createProject.mutate({
       data: {
         name: newProjectName,
         type: newProjectType,
         description: "",
-        primaryLanguage: "en",
+        primaryLanguage: "es",
         status: "active"
       }
     }, {
       onSuccess: (project) => {
-        toast({ title: "Project created", description: "Taking you to the editor..." });
         queryClient.invalidateQueries({ queryKey: getGetDashboardQueryKey() });
         setIsCreating(false);
         setNewProjectName("");
         setLocation(`/projects/${project.id}`);
       },
       onError: () => {
-        toast({ title: "Failed to create project", variant: "destructive" });
+        toast({ title: t('dashboard.form.title'), variant: "destructive" });
       }
     });
   };
@@ -76,49 +77,60 @@ export default function Dashboard() {
   return (
     <div className="container py-8">
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">{t('dashboard.title')}</h1>
+        <h1 className="text-3xl font-bold tracking-tight" data-testid="text-dashboard-title">{t('dashboard.title')}</h1>
         <Dialog open={isCreating} onOpenChange={setIsCreating}>
           <DialogTrigger asChild>
-            <Button className="gap-2">
+            <Button className="gap-2" data-testid="button-new-project">
               <Plus className="w-4 h-4" />
               {t('dashboard.create')}
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Create New Project</DialogTitle>
-              <DialogDescription>Give your new story a name to get started.</DialogDescription>
+              <DialogTitle>{t('dashboard.form.title')}</DialogTitle>
+              <DialogDescription>{t('dashboard.form.desc')}</DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Name</Label>
-                <Input 
-                  id="name" 
-                  value={newProjectName} 
-                  onChange={(e) => setNewProjectName(e.target.value)} 
-                  placeholder="e.g. The Winds of Winter" 
+                <Label htmlFor="new-project-name">{t('dashboard.form.name')}</Label>
+                <Input
+                  id="new-project-name"
+                  data-testid="input-project-name"
+                  value={newProjectName}
+                  onChange={(e) => setNewProjectName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleCreateProject(); }}
+                  placeholder="e.g. Las Voces del Viento"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="type">Type</Label>
-                <Select value={newProjectType} onValueChange={(v: any) => setNewProjectType(v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select type" />
+                <Label htmlFor="new-project-type">{t('dashboard.form.type')}</Label>
+                <Select
+                  value={newProjectType}
+                  onValueChange={(v: ProjectType) => setNewProjectType(v)}
+                >
+                  <SelectTrigger id="new-project-type" data-testid="select-project-type">
+                    <SelectValue placeholder={t('dashboard.form.type')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="novel">Novel</SelectItem>
-                    <SelectItem value="saga">Saga / Series</SelectItem>
-                    <SelectItem value="screenplay">Screenplay</SelectItem>
-                    <SelectItem value="articles">Articles</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
+                    <SelectItem value="novel">{t('dashboard.type.novel')}</SelectItem>
+                    <SelectItem value="saga">{t('dashboard.type.saga')}</SelectItem>
+                    <SelectItem value="screenplay">{t('dashboard.type.screenplay')}</SelectItem>
+                    <SelectItem value="articles">{t('dashboard.type.articles')}</SelectItem>
+                    <SelectItem value="other">{t('dashboard.type.other')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsCreating(false)}>Cancel</Button>
-              <Button onClick={handleCreateProject} disabled={!newProjectName.trim() || createProject.isPending}>
-                {createProject.isPending ? "Creating..." : "Create Project"}
+              <Button variant="outline" onClick={() => setIsCreating(false)} data-testid="button-cancel-project">
+                {t('form.cancel')}
+              </Button>
+              <Button
+                onClick={handleCreateProject}
+                disabled={!newProjectName.trim() || createProject.isPending}
+                data-testid="button-create-project"
+              >
+                {createProject.isPending ? t('dashboard.form.creating') : t('dashboard.form.create')}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -126,28 +138,28 @@ export default function Dashboard() {
       </div>
 
       {projects.length === 0 ? (
-        <div className="text-center py-20 bg-muted/30 rounded-xl border border-dashed">
+        <div className="text-center py-20 bg-muted/30 rounded-xl border border-dashed" data-testid="status-empty-projects">
           <Layout className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
           <h3 className="text-lg font-medium mb-2">{t('dashboard.empty')}</h3>
-          <Button onClick={() => setIsCreating(true)} variant="outline" className="mt-4">
-            <Plus className="w-4 h-4 mr-2" /> Start Writing
+          <Button onClick={() => setIsCreating(true)} variant="outline" className="mt-4" data-testid="button-start-writing">
+            <Plus className="w-4 h-4 mr-2" /> {t('landing.cta')}
           </Button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
           {projects.map((project) => (
-            <Card key={project.id} className="hover:border-primary/50 transition-colors flex flex-col">
+            <Card key={project.id} className="hover:border-primary/50 transition-colors flex flex-col" data-testid={`card-project-${project.id}`}>
               <CardHeader className="pb-4">
                 <div className="flex justify-between items-start">
                   <div>
                     <CardTitle className="text-xl mb-1 line-clamp-1">
-                      <Link href={`/projects/${project.id}`} className="hover:underline">
+                      <Link href={`/projects/${project.id}`} className="hover:underline" data-testid={`link-project-${project.id}`}>
                         {project.name}
                       </Link>
                     </CardTitle>
                     <CardDescription className="capitalize flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-secondary inline-block"></span>
-                      {project.type}
+                      <span className="w-2 h-2 rounded-full bg-secondary inline-block" />
+                      {t(`dashboard.type.${project.type}` as Parameters<typeof t>[0])}
                     </CardDescription>
                   </div>
                 </div>
@@ -167,12 +179,12 @@ export default function Dashboard() {
                   </div>
                 </div>
               </CardContent>
-              <CardFooter className="pt-0 flex justify-between border-t mt-auto pt-4 bg-muted/10 rounded-b-xl">
+              <CardFooter className="flex justify-between border-t mt-auto pt-4 bg-muted/10 rounded-b-xl">
                 <span className="text-xs text-muted-foreground">
-                  Updated {formatDistanceToNow(new Date(project.updatedAt), { addSuffix: true })}
+                  {t('dashboard.project.updated')} {formatDistanceToNow(new Date(project.updatedAt), { addSuffix: true })}
                 </span>
-                <Button size="sm" variant="ghost" asChild className="h-8">
-                  <Link href={`/projects/${project.id}`}>Open</Link>
+                <Button size="sm" variant="ghost" asChild className="h-8" data-testid={`button-open-project-${project.id}`}>
+                  <Link href={`/projects/${project.id}`}>{t('dashboard.project.open')}</Link>
                 </Button>
               </CardFooter>
             </Card>
@@ -188,15 +200,15 @@ export default function Dashboard() {
           </h2>
           <div className="space-y-4">
             {recentActivity.map((activity, i) => (
-              <div key={i} className="flex items-start gap-4 p-4 rounded-lg border bg-card text-sm">
+              <div key={i} className="flex items-start gap-4 p-4 rounded-lg border bg-card text-sm" data-testid={`row-activity-${i}`}>
                 <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
                   <FileText className="w-4 h-4" />
                 </div>
                 <div className="flex-1">
                   <p>
                     <span className="font-medium text-foreground">{activity.projectName}</span>
-                    <span className="text-muted-foreground mx-1">•</span>
-                    Updated {activity.entityName}
+                    <span className="text-muted-foreground mx-1">·</span>
+                    {activity.entityName}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
                     {formatDistanceToNow(new Date(activity.updatedAt), { addSuffix: true })}

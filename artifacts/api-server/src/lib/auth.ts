@@ -1,6 +1,12 @@
 import { getAuth } from "@clerk/express";
 import type { Request, Response, NextFunction } from "express";
 
+declare module "express-serve-static-core" {
+  interface Request {
+    userId?: string;
+  }
+}
+
 export function requireAuth(req: Request, res: Response, next: NextFunction): void {
   const auth = getAuth(req);
   const userId = auth?.userId;
@@ -8,10 +14,10 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
     res.status(401).json({ error: "Unauthorized" });
     return;
   }
-  (req as any).userId = userId;
+  req.userId = userId;
   next();
 }
 
 export function getUserId(req: Request): string {
-  return (req as any).userId as string;
+  return req.userId!;
 }

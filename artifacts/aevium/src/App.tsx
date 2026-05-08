@@ -113,7 +113,7 @@ function SignUpPage() {
 
 function App() {
   return (
-    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
+    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem storageKey="aevium-theme">
       <I18nProvider>
         <QueryClientProvider client={queryClient}>
           <TooltipProvider>
