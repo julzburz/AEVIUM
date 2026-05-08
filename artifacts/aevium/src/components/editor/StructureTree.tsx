@@ -4,9 +4,9 @@ import {
   useListBooks, getListBooksQueryKey,
   useListChapters, getListChaptersQueryKey,
   useListScenes, getListScenesQueryKey,
-  useCreateBook, useDeleteBook,
-  useCreateChapter, useDeleteChapter,
-  useCreateScene, useDeleteScene,
+  useCreateBook, useDeleteBook, useUpdateBook,
+  useCreateChapter, useDeleteChapter, useUpdateChapter,
+  useCreateScene, useDeleteScene, useUpdateScene,
 } from "@workspace/api-client-react";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
@@ -19,7 +19,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  ChevronRight, ChevronDown, BookOpen, FileText, Plus, MoreHorizontal, Trash2,
+  ChevronRight, ChevronDown, BookOpen, FileText, Plus, MoreHorizontal, Trash2, Pencil,
 } from "lucide-react";
 
 interface StructureTreeProps {
@@ -43,6 +43,11 @@ const sceneStatusDot: Record<SceneStatus, string> = {
   blocked:   "bg-destructive",
 };
 
+type RenameTarget =
+  | { kind: "book";    id: number; projectId: number;  currentTitle: string }
+  | { kind: "chapter"; id: number; bookId: number;     currentTitle: string }
+  | { kind: "scene";   id: number; chapterId: number;  currentTitle: string };
+
 export function StructureTree({
   projectId,
   selectedSceneId,
@@ -65,6 +70,9 @@ export function StructureTree({
   const [showNewChapterForBook, setShowNewChapterForBook] = useState<number | null>(null);
   const [showNewSceneForChapter, setShowNewSceneForChapter] = useState<number | null>(null);
 
+  const [renameTarget, setRenameTarget] = useState<RenameTarget | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+
   const { data: books = [] } = useListBooks(projectId, {
     query: { queryKey: getListBooksQueryKey(projectId) }
   });
@@ -77,10 +85,13 @@ export function StructureTree({
 
   const createBook = useCreateBook();
   const deleteBook = useDeleteBook();
+  const updateBook = useUpdateBook();
   const createChapter = useCreateChapter();
   const deleteChapter = useDeleteChapter();
+  const updateChapter = useUpdateChapter();
   const createScene = useCreateScene();
   const deleteScene = useDeleteScene();
+  const updateScene = useUpdateScene();
 
   const toggleBook = (bookId: number) => {
     const next = new Set(expandedBooks);
@@ -108,6 +119,51 @@ export function StructureTree({
       setActiveChapterId(chapterId);
     }
     setExpandedChapters(next);
+  };
+
+  const openRename = (target: RenameTarget) => {
+    setRenameTarget(target);
+    setRenameValue(target.currentTitle);
+  };
+
+  const handleRename = () => {
+    if (!renameTarget || !renameValue.trim()) return;
+    const title = renameValue.trim();
+
+    if (renameTarget.kind === "book") {
+      updateBook.mutate(
+        { projectId: renameTarget.projectId, id: renameTarget.id, data: { title } },
+        {
+          onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: getListBooksQueryKey(renameTarget.projectId) });
+            setRenameTarget(null);
+          },
+          onError: () => toast({ title: t('editor.newBook'), variant: "destructive" }),
+        }
+      );
+    } else if (renameTarget.kind === "chapter") {
+      updateChapter.mutate(
+        { bookId: renameTarget.bookId, id: renameTarget.id, data: { title } },
+        {
+          onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: getListChaptersQueryKey(renameTarget.bookId) });
+            setRenameTarget(null);
+          },
+          onError: () => toast({ title: t('editor.newChapter'), variant: "destructive" }),
+        }
+      );
+    } else {
+      updateScene.mutate(
+        { chapterId: renameTarget.chapterId, id: renameTarget.id, data: { title } },
+        {
+          onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: getListScenesQueryKey(renameTarget.chapterId) });
+            setRenameTarget(null);
+          },
+          onError: () => toast({ title: t('editor.newScene'), variant: "destructive" }),
+        }
+      );
+    }
   };
 
   const handleCreateBook = () => {
@@ -176,6 +232,9 @@ export function StructureTree({
   const chaptersForBook = (bookId: number) => activeBookId === bookId ? chapters : [];
   const scenesForChapter = (chapterId: number) => activeChapterId === chapterId ? scenes : [];
 
+  const isRenaming = renameTarget !== null &&
+    (updateBook.isPending || updateChapter.isPending || updateScene.isPending);
+
   return (
     <div className="flex-1 overflow-auto p-2 text-sm">
       <div className="text-xs font-semibold text-muted-foreground tracking-widest px-2 py-2 mb-1">
@@ -209,6 +268,9 @@ export function StructureTree({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent>
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openRename({ kind: "book", id: book.id, projectId, currentTitle: book.title }); }} data-testid={`button-rename-book-${book.id}`}>
+                          <Pencil className="w-3.5 h-3.5 mr-2" /> {t('editor.renameBook')}
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setShowNewChapterForBook(book.id); }} data-testid={`button-add-chapter-${book.id}`}>
                           <Plus className="w-3.5 h-3.5 mr-2" /> {t('editor.newChapter')}
                         </DropdownMenuItem>
@@ -246,6 +308,9 @@ export function StructureTree({
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent>
+                                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openRename({ kind: "chapter", id: chapter.id, bookId: book.id, currentTitle: chapter.title }); }} data-testid={`button-rename-chapter-${chapter.id}`}>
+                                    <Pencil className="w-3.5 h-3.5 mr-2" /> {t('editor.renameChapter')}
+                                  </DropdownMenuItem>
                                   <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setShowNewSceneForChapter(chapter.id); }} data-testid={`button-add-scene-${chapter.id}`}>
                                     <Plus className="w-3.5 h-3.5 mr-2" /> {t('editor.newScene')}
                                   </DropdownMenuItem>
@@ -276,9 +341,12 @@ export function StructureTree({
                                     <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotClass}`} title={t(`editor.${statusKey}` as Parameters<typeof t>[0])} />
                                     <FileText className="w-3 h-3 shrink-0" />
                                     <span className="flex-1 truncate text-xs">{scene.title}</span>
-                                    <div className="opacity-0 group-hover:opacity-100">
+                                    <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5">
+                                      <Button variant="ghost" size="icon" className="w-5 h-5" onClick={(e) => { e.stopPropagation(); openRename({ kind: "scene", id: scene.id, chapterId: chapter.id, currentTitle: scene.title }); }} data-testid={`button-rename-scene-${scene.id}`}>
+                                        <Pencil className="w-2.5 h-2.5" />
+                                      </Button>
                                       <Button variant="ghost" size="icon" className="w-5 h-5 text-destructive" onClick={(e) => handleDeleteScene(chapter.id, scene.id, e)} data-testid={`button-delete-scene-${scene.id}`}>
-                                        <Trash2 className="w-3 h-3" />
+                                        <Trash2 className="w-2.5 h-2.5" />
                                       </Button>
                                     </div>
                                   </div>
@@ -336,6 +404,36 @@ export function StructureTree({
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowNewSceneForChapter(null)}>{t('form.cancel')}</Button>
             <Button onClick={() => showNewSceneForChapter && handleCreateScene(showNewSceneForChapter)} disabled={!newSceneTitle.trim() || createScene.isPending} data-testid="button-create-scene">{t('editor.createScene')}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={renameTarget !== null} onOpenChange={(o) => { if (!o) setRenameTarget(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {renameTarget?.kind === "book" ? t('editor.renameBook') :
+               renameTarget?.kind === "chapter" ? t('editor.renameChapter') :
+               t('editor.renameScene')}
+            </DialogTitle>
+          </DialogHeader>
+          <Input
+            autoFocus
+            value={renameValue}
+            onChange={(e) => setRenameValue(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleRename(); }}
+            placeholder={
+              renameTarget?.kind === "book" ? t('editor.bookTitle') :
+              renameTarget?.kind === "chapter" ? t('editor.chapterTitle') :
+              t('editor.sceneTitle')
+            }
+            data-testid="input-rename"
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRenameTarget(null)}>{t('form.cancel')}</Button>
+            <Button onClick={handleRename} disabled={!renameValue.trim() || isRenaming} data-testid="button-confirm-rename">
+              {t('form.save')}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

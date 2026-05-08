@@ -11,10 +11,12 @@ import worldRulesRouter from "./worldRules";
 import memoryRouter from "./memory";
 import timelineRouter from "./timeline";
 import styleGuideRouter from "./styleGuide";
+import profileRouter from "./profile";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
+router.use(profileRouter);
 router.use(projectsRouter);
 router.use(dashboardRouter);
 router.use(booksRouter);
