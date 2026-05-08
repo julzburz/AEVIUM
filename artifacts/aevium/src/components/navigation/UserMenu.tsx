@@ -22,7 +22,7 @@ export function UserMenu() {
             <AvatarFallback><User className="h-4 w-4" /></AvatarFallback>
           </Avatar>
           <span className="text-sm font-medium hidden md:inline-block">
-            {user.firstName || user.username || 'Writer'}
+            {user.firstName || user.username || t('nav.user')}
           </span>
         </button>
       </DropdownMenuTrigger>

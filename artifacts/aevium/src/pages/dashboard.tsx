@@ -3,6 +3,7 @@ import { useGetDashboard, getGetDashboardQueryKey, useCreateProject } from "@wor
 import { useI18n } from "@/lib/i18n";
 import { Link, useLocation } from "wouter";
 import { formatDistanceToNow } from "date-fns";
+import { es, enUS, type Locale } from "date-fns/locale";
 import { BookOpen, FileText, Plus, Layout, History, Search, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,11 +24,14 @@ const statusVariant: Record<string, "default" | "secondary" | "outline"> = {
   archived: "outline",
 };
 
+const dateFnsLocale: Record<string, Locale> = { es, en: enUS };
+
 export default function Dashboard() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const locale = dateFnsLocale[lang] ?? es;
 
   const { data: dashboard, isLoading } = useGetDashboard({
     query: { queryKey: getGetDashboardQueryKey() }
@@ -48,7 +52,7 @@ export default function Dashboard() {
         name: newProjectName,
         type: newProjectType,
         description: "",
-        primaryLanguage: "es",
+        primaryLanguage: lang,
         status: "active"
       }
     }, {
@@ -245,7 +249,7 @@ export default function Dashboard() {
               </CardContent>
               <CardFooter className="flex justify-between border-t mt-auto pt-3 pb-3 bg-muted/10 rounded-b-xl">
                 <span className="text-xs text-muted-foreground">
-                  {t('dashboard.project.updated')} {formatDistanceToNow(new Date(project.updatedAt), { addSuffix: true })}
+                  {t('dashboard.project.updated')} {formatDistanceToNow(new Date(project.updatedAt), { addSuffix: true, locale })}
                 </span>
                 <Button size="sm" variant="ghost" asChild className="h-7 text-xs" data-testid={`button-open-project-${project.id}`}>
                   <Link href={`/projects/${project.id}`}>{t('dashboard.project.open')}</Link>
@@ -279,7 +283,7 @@ export default function Dashboard() {
                     {activity.entityName}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {formatDistanceToNow(new Date(activity.updatedAt), { addSuffix: true })}
+                    {formatDistanceToNow(new Date(activity.updatedAt), { addSuffix: true, locale })}
                   </p>
                 </div>
               </div>

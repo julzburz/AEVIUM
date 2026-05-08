@@ -1,5 +1,6 @@
 {
   "nav.dashboard": "Dashboard",
+  "nav.user": "Writer",
   "nav.projects": "Projects",
   "nav.settings": "Settings",
   "nav.signOut": "Sign Out",

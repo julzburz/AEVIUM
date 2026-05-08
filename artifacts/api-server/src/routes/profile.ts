@@ -1,10 +1,18 @@
 import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
+import { z } from "zod";
 import { db } from "@workspace/db";
 import { profilesTable } from "@workspace/db";
 import { requireAuth, getUserId } from "../lib/auth";
 
 const router: IRouter = Router();
+
+const UpdateProfileBody = z.object({
+  theme: z.enum(["dark", "light", "system"]).optional(),
+  language: z.enum(["en", "es"]).optional(),
+  displayName: z.string().nullish(),
+  bio: z.string().nullish(),
+});
 
 router.get("/me/profile", requireAuth, async (req, res): Promise<void> => {
   const userId = getUserId(req);
@@ -22,12 +30,12 @@ router.get("/me/profile", requireAuth, async (req, res): Promise<void> => {
 
 router.put("/me/profile", requireAuth, async (req, res): Promise<void> => {
   const userId = getUserId(req);
-  const { theme, language, displayName, bio } = req.body as {
-    theme?: string;
-    language?: string;
-    displayName?: string | null;
-    bio?: string | null;
-  };
+  const parsed = UpdateProfileBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  const { theme, language, displayName, bio } = parsed.data;
 
   const [existing] = await db
     .select()

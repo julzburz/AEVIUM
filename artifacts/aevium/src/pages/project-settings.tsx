@@ -62,7 +62,7 @@ export default function ProjectSettings() {
   }
 
   if (!project) {
-    return <div className="container py-8">404</div>;
+    return <div className="container py-8">{t('notFound.message')}</div>;
   }
 
   return (
