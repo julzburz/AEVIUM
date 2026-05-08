@@ -1,18 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@clerk/react";
 
-const PROFILE_QUERY_KEY = ["me/profile"];
+export const PROFILE_QUERY_KEY = ["me/profile"] as const;
 
-interface UserProfile {
+export interface UserProfile {
   userId: string;
   theme: string | null;
   language: string | null;
   displayName: string | null;
   bio: string | null;
 }
-
-const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
-const apiBase = import.meta.env.VITE_API_BASE_URL ?? "";
 
 async function fetchWithAuth(url: string, token: string, options?: RequestInit) {
   const res = await fetch(url, {
@@ -24,7 +21,7 @@ async function fetchWithAuth(url: string, token: string, options?: RequestInit) 
     },
   });
   if (!res.ok) throw new Error(`Profile API error: ${res.status}`);
-  return res.json();
+  return res.json() as Promise<UserProfile>;
 }
 
 export function useProfile() {
@@ -37,7 +34,7 @@ export function useProfile() {
     queryFn: async () => {
       const token = await getToken();
       if (!token) throw new Error("No token");
-      return fetchWithAuth(`${apiBase}/me/profile`, token);
+      return fetchWithAuth("/api/me/profile", token);
     },
   });
 }
@@ -50,7 +47,7 @@ export function useUpdateProfile() {
     mutationFn: async (data: Partial<Pick<UserProfile, "theme" | "language" | "displayName" | "bio">>) => {
       const token = await getToken();
       if (!token) throw new Error("No token");
-      return fetchWithAuth(`${apiBase}/me/profile`, token, {
+      return fetchWithAuth("/api/me/profile", token, {
         method: "PUT",
         body: JSON.stringify(data),
       });

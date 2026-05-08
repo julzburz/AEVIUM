@@ -5,8 +5,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ClerkProvider, SignIn, SignUp, Show, useClerk } from "@clerk/react";
 import { publishableKeyFromHost } from "@clerk/react/internal";
 import { shadcn } from "@clerk/themes";
-import { ThemeProvider } from "next-themes";
-import { I18nProvider } from "./lib/i18n";
+import { ThemeProvider, useTheme } from "next-themes";
+import { I18nProvider, useI18n } from "./lib/i18n";
+import { useProfile, type UserProfile } from "./lib/useProfile";
 import NotFound from "@/pages/not-found";
 import { useEffect, useRef } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -66,6 +67,27 @@ function ClerkQueryClientCacheInvalidator() {
   return null;
 }
 
+function ProfileHydrator() {
+  const { data: profile } = useProfile();
+  const { setTheme } = useTheme();
+  const { setLang } = useI18n();
+  const appliedRef = useRef(false);
+
+  useEffect(() => {
+    if (!profile || appliedRef.current) return;
+    appliedRef.current = true;
+
+    if (profile.theme && (profile.theme === "dark" || profile.theme === "light" || profile.theme === "system")) {
+      setTheme(profile.theme);
+    }
+    if (profile.language && (profile.language === "en" || profile.language === "es")) {
+      setLang(profile.language);
+    }
+  }, [profile, setTheme, setLang]);
+
+  return null;
+}
+
 function HomeRedirect() {
   return (
     <>
@@ -106,6 +128,7 @@ function App() {
                 signUpUrl={`${basePath}/sign-up`}
               >
                 <ClerkQueryClientCacheInvalidator />
+                <ProfileHydrator />
                 <Switch>
                   <Route path="/" component={HomeRedirect} />
                   <Route path="/sign-in/*?" component={SignInPage} />
