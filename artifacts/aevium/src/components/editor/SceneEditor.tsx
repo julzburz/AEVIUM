@@ -150,6 +150,9 @@ export function SceneEditor({ sceneId, chapterId, projectId, onWordCountChange, 
   useEffect(() => { sceneIdRef.current = sceneId; }, [sceneId]);
   useEffect(() => { chapterIdRef.current = chapterId; }, [chapterId]);
 
+  // Tracks whether there is unsaved content since last save — updated on every edit, cleared on save
+  const pendingSnapshotRef = useRef<{ content: string; wordCount: number; sceneId: number; chapterId: number } | null>(null);
+
   const { data: scene, isLoading } = useGetScene(chapterId, sceneId, {
     query: { enabled: !!sceneId && !!chapterId, queryKey: getGetSceneQueryKey(chapterId, sceneId) }
   });
@@ -212,6 +215,10 @@ export function SceneEditor({ sceneId, chapterId, projectId, onWordCountChange, 
         },
         {
           onSuccess: () => {
+            // Clear pending snapshot only for the scene we just saved
+            if (pendingSnapshotRef.current?.sceneId === forSceneId) {
+              pendingSnapshotRef.current = null;
+            }
             updateSaveStatus("saved");
             queryClient.invalidateQueries({ queryKey: getGetSceneQueryKey(forChapterId, forSceneId) });
             setTimeout(() => updateSaveStatus("idle"), 2000);
@@ -222,14 +229,23 @@ export function SceneEditor({ sceneId, chapterId, projectId, onWordCountChange, 
     };
   }, [updateScene, queryClient, updateSaveStatus]);
 
-  // Cancel any pending timer when the active scene changes to prevent cross-scene writes
+  // On scene switch: flush any pending snapshot to the OLD scene before clearing the timer.
+  // The closure captures the scene IDs at effect-creation time (i.e. the previous values).
   useEffect(() => {
+    const prevSceneId = sceneId;
+    const prevChapterId = chapterId;
     return () => {
       if (saveTimer.current) {
         clearTimeout(saveTimer.current);
         saveTimer.current = null;
       }
+      // Flush pending edits for the scene we are leaving
+      const snap = pendingSnapshotRef.current;
+      if (snap && snap.sceneId === prevSceneId) {
+        doSaveRef.current(snap.content, snap.wordCount, prevSceneId, prevChapterId);
+      }
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sceneId]);
 
   const editor = useEditor({
@@ -246,6 +262,8 @@ export function SceneEditor({ sceneId, chapterId, projectId, onWordCountChange, 
       const words = e.getText().trim().split(/\s+/).filter(Boolean).length;
       const forSceneId = sceneIdRef.current;
       const forChapterId = chapterIdRef.current;
+      // Store snapshot so cleanup can flush it if user switches scene before timer fires
+      pendingSnapshotRef.current = { content, wordCount: words, sceneId: forSceneId, chapterId: forChapterId };
       onWordCountChange(words);
       if (saveTimer.current) clearTimeout(saveTimer.current);
       saveTimer.current = setTimeout(() => {
