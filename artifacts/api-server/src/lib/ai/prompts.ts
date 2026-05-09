@@ -182,6 +182,24 @@ export function buildImportCharactersPrompt(text: string): string {
   ].join("\n");
 }
 
+export function buildImportWorldRulesPrompt(text: string): string {
+  const preview = text.slice(0, 12000);
+  return [
+    "--- TEXTO CON REGLAS DEL MUNDO ---",
+    preview,
+    "",
+    "Extrae TODAS las reglas, leyes, normas o principios del mundo ficticio descritos en el texto y devuelve EXCLUSIVAMENTE este JSON:",
+    '{"worldRules":[{"title":"...","category":"...","content":"..."}]}',
+    "",
+    "Reglas:",
+    "1. title: nombre corto de la regla (2-6 palabras).",
+    "2. category: tipo de regla (p.ej. 'magia', 'sociedad', 'tecnología', 'geografía', 'política'). Si no aplica claramente, usa null.",
+    "3. content: descripción completa de la regla tal como aparece en el texto.",
+    "4. No inventes reglas que no estén en el texto.",
+    "5. Devuelve SOLO el JSON, sin markdown ni explicación adicional.",
+  ].join("\n");
+}
+
 export function buildStyleAnalyzePrompt(text: string): string {
   return [
     "--- FRAGMENTO DEL TEXTO A ANALIZAR ---",

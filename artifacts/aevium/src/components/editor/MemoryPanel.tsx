@@ -21,6 +21,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Users, Map, Globe, BookMarked, Plus, Trash2, Upload } from "lucide-react";
 import { CharacterImportDialog } from "./CharacterImportDialog";
+import { WorldRuleImportDialog } from "./WorldRuleImportDialog";
 
 type MemSubTab = "characters" | "locations" | "worldRules" | "items";
 
@@ -246,6 +247,7 @@ function WorldRulesTab({ projectId }: { projectId: number }) {
   const del = useDeleteWorldRule();
 
   const [editing, setEditing] = useState<WorldRule | null | "new">(null);
+  const [importOpen, setImportOpen] = useState(false);
   const [form, setForm] = useState({ title: "", content: "", category: "" });
 
   const openNew = () => { setForm({ title: "", content: "", category: "" }); setEditing("new"); };
@@ -273,7 +275,10 @@ function WorldRulesTab({ projectId }: { projectId: number }) {
 
   return (
     <div>
-      <div className="flex justify-end mb-2">
+      <div className="flex justify-end gap-1 mb-2">
+        <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={() => setImportOpen(true)} data-testid="button-import-world-rules">
+          <Upload className="w-3 h-3" />{t('editor.import.worldRules.import')}
+        </Button>
         <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={openNew} data-testid="button-new-world-rule"><Plus className="w-3 h-3" />{t('editor.newWorldRule')}</Button>
       </div>
       {items.length === 0 ? <p className="text-xs text-muted-foreground py-2">{t('editor.noWorldRules')}</p> : (
@@ -315,6 +320,12 @@ function WorldRulesTab({ projectId }: { projectId: number }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <WorldRuleImportDialog
+        projectId={projectId}
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+      />
     </div>
   );
 }
