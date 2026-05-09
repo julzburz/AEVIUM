@@ -4,6 +4,8 @@ import { db } from "@workspace/db";
 import { projectsTable, memoryItemsTable, continuityAlertsTable, sceneVersionsTable, scenesTable, aiCredentialsTable, chaptersTable } from "@workspace/db";
 import { requireAuth, getUserId } from "../lib/auth.js";
 import { geminiProvider, createCustomGeminiProvider } from "../lib/ai/geminiProvider.js";
+import { createOpenAIProvider } from "../lib/ai/openaiProvider.js";
+import { createAnthropicProvider } from "../lib/ai/anthropicProvider.js";
 import { assembleContext, buildSystemPrompt, verifySceneOwnership, verifyChapterOwnership, verifySceneInProject } from "../lib/ai/contextAssembler.js";
 import { decrypt } from "../lib/encryption.js";
 import type { NarrativeContext } from "../lib/ai/types.js";
@@ -88,7 +90,10 @@ async function getProviderForProject(projectId: number, userId: string) {
 
     if (cred?.encryptedSecret) {
       const apiKey = decrypt(cred.encryptedSecret);
-      return createCustomGeminiProvider(apiKey, cred.model ?? undefined);
+      const model = cred.model ?? undefined;
+      if (cred.provider === "openai") return createOpenAIProvider(apiKey, model);
+      if (cred.provider === "anthropic") return createAnthropicProvider(apiKey, model);
+      return createCustomGeminiProvider(apiKey, model);
     }
   } catch {
     // fall through to built-in

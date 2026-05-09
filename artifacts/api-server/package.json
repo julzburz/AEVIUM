@@ -10,6 +10,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.95.1",
     "@clerk/express": "^2.1.14",
     "@clerk/shared": "^4.10.1",
     "@workspace/api-zod": "workspace:*",
@@ -18,11 +19,12 @@
     "cookie-parser": "^1.4.7",
     "cors": "^2",
     "drizzle-orm": "catalog:",
-    "zod": "catalog:",
     "express": "^5",
     "http-proxy-middleware": "^4.0.0",
+    "openai": "^6.37.0",
     "pino": "^9",
-    "pino-http": "^10"
+    "pino-http": "^10",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@types/cookie-parser": "^1.4.10",
