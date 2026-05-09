@@ -18,6 +18,7 @@ import {
   buildFreeChatPrompt,
   buildFreeChatSystemPrompt,
   buildImportStructurePrompt,
+  buildImportCharactersPrompt,
   type ChatHistoryEntry,
 } from "../lib/ai/prompts.js";
 import { buildQueryEmbedding } from "../lib/ai/embeddingService.js";
@@ -457,6 +458,50 @@ router.post("/ai/import-structure", requireAuth, async (req, res): Promise<void>
   }
 
   res.json({ chapterTitle: aiResult.chapterTitle, scenes });
+});
+
+const ImportCharactersBody = z.object({
+  projectId: z.coerce.number(),
+  text: z.string().min(1),
+});
+
+router.post("/ai/import-characters", requireAuth, async (req, res): Promise<void> => {
+  const userId = getUserId(req);
+  const body = ImportCharactersBody.safeParse(req.body);
+  if (!body.success) { res.status(400).json({ error: body.error.message }); return; }
+
+  const project = await verifyProject(body.data.projectId, userId);
+  if (!project) { res.status(404).json({ error: "Project not found" }); return; }
+
+  const provider = await getProviderForProject(body.data.projectId, userId);
+  const prompt = buildImportCharactersPrompt(body.data.text);
+
+  const raw = await provider.generateText(prompt, "Eres un asistente de edición literaria. Devuelve únicamente JSON válido, sin markdown ni texto adicional.");
+
+  let aiResult: { characters: { name: string; role: string; physicalDescription: string | null; personality: string | null; motivations: string | null; currentState: string | null; injuries: string | null; secrets: string | null }[] };
+  try {
+    const cleaned = raw.replace(/^```(?:json)?\s*/im, "").replace(/```\s*$/m, "").trim();
+    aiResult = JSON.parse(cleaned);
+  } catch {
+    const match = raw.match(/\{[\s\S]*\}/);
+    if (!match) { res.status(422).json({ error: "AI did not return valid JSON", raw: raw.slice(0, 500) }); return; }
+    try { aiResult = JSON.parse(match[0]); }
+    catch { res.status(422).json({ error: "AI did not return valid JSON", raw: raw.slice(0, 500) }); return; }
+  }
+
+  const validRoles = ["protagonist", "antagonist", "secondary", "minor"];
+  const characters = (aiResult.characters ?? []).map(c => ({
+    name: c.name ?? "Personaje",
+    role: validRoles.includes(c.role) ? c.role : "secondary",
+    physicalDescription: c.physicalDescription ?? null,
+    personality: c.personality ?? null,
+    motivations: c.motivations ?? null,
+    currentState: c.currentState ?? null,
+    injuries: c.injuries ?? null,
+    secrets: c.secrets ?? null,
+  }));
+
+  res.json({ characters });
 });
 
 router.post("/ai/test-builtin", requireAuth, async (_req, res): Promise<void> => {

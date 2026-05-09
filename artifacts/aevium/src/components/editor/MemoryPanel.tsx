@@ -19,7 +19,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Users, Map, Globe, BookMarked, Plus, Trash2 } from "lucide-react";
+import { Users, Map, Globe, BookMarked, Plus, Trash2, Upload } from "lucide-react";
+import { CharacterImportDialog } from "./CharacterImportDialog";
 
 type MemSubTab = "characters" | "locations" | "worldRules" | "items";
 
@@ -37,6 +38,7 @@ function CharactersTab({ projectId }: { projectId: number }) {
   const del = useDeleteCharacter();
 
   const [editing, setEditing] = useState<Character | null | "new">(null);
+  const [importOpen, setImportOpen] = useState(false);
   const [form, setForm] = useState({ name: "", role: "secondary" as CreateCharacterBodyRole, physicalDescription: "", personality: "", motivations: "", currentState: "", injuries: "", secrets: "" });
 
   const openNew = () => { setForm({ name: "", role: "secondary", physicalDescription: "", personality: "", motivations: "", currentState: "", injuries: "", secrets: "" }); setEditing("new"); };
@@ -78,7 +80,10 @@ function CharactersTab({ projectId }: { projectId: number }) {
 
   return (
     <div>
-      <div className="flex justify-end mb-2">
+      <div className="flex justify-end gap-1 mb-2">
+        <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={() => setImportOpen(true)} data-testid="button-import-characters">
+          <Upload className="w-3 h-3" />{t('editor.import.characters.import')}
+        </Button>
         <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={openNew} data-testid="button-new-character"><Plus className="w-3 h-3" />{t('editor.newCharacter')}</Button>
       </div>
       {items.length === 0 ? <p className="text-xs text-muted-foreground py-2">{t('editor.noCharacters')}</p> : (
@@ -138,6 +143,12 @@ function CharactersTab({ projectId }: { projectId: number }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <CharacterImportDialog
+        projectId={projectId}
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+      />
     </div>
   );
 }

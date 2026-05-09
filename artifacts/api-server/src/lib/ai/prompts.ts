@@ -164,6 +164,24 @@ export function buildImportStructurePrompt(text: string, filename: string): stri
   ].join("\n");
 }
 
+export function buildImportCharactersPrompt(text: string): string {
+  const preview = text.slice(0, 12000);
+  return [
+    "--- TEXTO CON DESCRIPCIONES DE PERSONAJES ---",
+    preview,
+    "",
+    "Extrae TODOS los personajes mencionados o descritos en el texto anterior y devuelve EXCLUSIVAMENTE este JSON:",
+    '{"characters":[{"name":"...","role":"protagonist|antagonist|secondary|minor","physicalDescription":"...","personality":"...","motivations":"...","currentState":"...","injuries":"...","secrets":"..."}]}',
+    "",
+    "Reglas:",
+    "1. name: nombre del personaje tal como aparece en el texto.",
+    "2. role: clasifica como protagonist, antagonist, secondary o minor según su importancia en el texto.",
+    "3. physicalDescription, personality, motivations, currentState, injuries, secrets: extrae literalmente lo que el texto diga. Si no se menciona, usa null.",
+    "4. No inventes información. Solo extrae lo que está escrito.",
+    "5. Devuelve SOLO el JSON, sin markdown ni explicación adicional.",
+  ].join("\n");
+}
+
 export function buildStyleAnalyzePrompt(text: string): string {
   return [
     "--- FRAGMENTO DEL TEXTO A ANALIZAR ---",
