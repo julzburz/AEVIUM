@@ -6,3 +6,9 @@ id = "SgtM_cGEKSDyU9AMxCqyB"
 uri = "file://.local/aevium-prompts.md"
 type = "text"
 title = "AEVIUM — Prompts del Agente"
+
+[[outputs]]
+id = "LM56ZeEHOtsg9BLI8Bv4H"
+uri = "file://.local/AEVIUM-proyecto-completo.md"
+type = "text"
+title = "AEVIUM — Documentación Completa del Proyecto"
