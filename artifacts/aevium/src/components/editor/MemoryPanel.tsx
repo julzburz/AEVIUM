@@ -19,7 +19,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Users, Map, Globe, BookMarked, Plus, Trash2, Upload } from "lucide-react";
+import { Users, Map, Globe, BookMarked, Plus, Trash2, Upload, Sparkles } from "lucide-react";
 import { CharacterImportDialog } from "./CharacterImportDialog";
 import { WorldRuleImportDialog } from "./WorldRuleImportDialog";
 
@@ -82,8 +82,8 @@ function CharactersTab({ projectId }: { projectId: number }) {
   return (
     <div>
       <div className="flex justify-end gap-1 mb-2">
-        <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={() => setImportOpen(true)} data-testid="button-import-characters">
-          <Upload className="w-3 h-3" />{t('editor.import.characters.import')}
+        <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 text-primary hover:text-primary" onClick={() => setImportOpen(true)} data-testid="button-import-characters">
+          <Sparkles className="w-3 h-3" />{t('editor.import.characters.import')}
         </Button>
         <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={openNew} data-testid="button-new-character"><Plus className="w-3 h-3" />{t('editor.newCharacter')}</Button>
       </div>
@@ -276,8 +276,8 @@ function WorldRulesTab({ projectId }: { projectId: number }) {
   return (
     <div>
       <div className="flex justify-end gap-1 mb-2">
-        <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={() => setImportOpen(true)} data-testid="button-import-world-rules">
-          <Upload className="w-3 h-3" />{t('editor.import.worldRules.import')}
+        <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 text-primary hover:text-primary" onClick={() => setImportOpen(true)} data-testid="button-import-world-rules">
+          <Sparkles className="w-3 h-3" />{t('editor.import.worldRules.import')}
         </Button>
         <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={openNew} data-testid="button-new-world-rule"><Plus className="w-3 h-3" />{t('editor.newWorldRule')}</Button>
       </div>
