@@ -68,23 +68,7 @@ export default function Dashboard() {
     });
   };
 
-  const MOCK_PROJECTS = [
-    { id: -1, name: "El último horizonte", type: "novel" as const, status: "active" as const, totalBooks: 1, totalChapters: 12, totalWords: 34820, primaryLanguage: "es", updatedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), isMock: true },
-    { id: -2, name: "Crónicas del vacío", type: "saga" as const, status: "active" as const, totalBooks: 3, totalChapters: 41, totalWords: 127450, primaryLanguage: "es", updatedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), isMock: true },
-    { id: -3, name: "The Lighthouse Keeper", type: "novel" as const, status: "completed" as const, totalBooks: 1, totalChapters: 22, totalWords: 78300, primaryLanguage: "en", updatedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), isMock: true },
-    { id: -4, name: "Fragmentos de luz", type: "articles" as const, status: "active" as const, totalBooks: 1, totalChapters: 8, totalWords: 14200, primaryLanguage: "es", updatedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), isMock: true },
-    { id: -5, name: "Nebulosa: Origen", type: "screenplay" as const, status: "archived" as const, totalBooks: 1, totalChapters: 5, totalWords: 9600, primaryLanguage: "es", updatedAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(), isMock: true },
-  ];
-
-  const MOCK_ACTIVITY = [
-    { projectName: "El último horizonte", entityName: "Capítulo 12 — El regreso", updatedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString() },
-    { projectName: "Crónicas del vacío", entityName: "Libro 2 · Escena 7 — La traición", updatedAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString() },
-    { projectName: "The Lighthouse Keeper", entityName: "Chapter 22 — End of summer", updatedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString() },
-    { projectName: "Fragmentos de luz", entityName: "Artículo — Filosofía del tiempo libre", updatedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString() },
-  ];
-
-  const rawProjects = dashboard?.projects ?? [];
-  const allProjects = rawProjects.length > 0 ? rawProjects : MOCK_PROJECTS;
+  const allProjects = dashboard?.projects ?? [];
 
   const filteredProjects = useMemo(() => {
     return allProjects.filter((p) => {
@@ -94,8 +78,7 @@ export default function Dashboard() {
     });
   }, [allProjects, searchQuery, filterType]);
 
-  const rawActivity = dashboard?.recentActivity ?? [];
-  const recentActivity = rawActivity.length > 0 ? rawActivity : MOCK_ACTIVITY;
+  const recentActivity = dashboard?.recentActivity ?? [];
 
   if (isLoading) {
     return (
@@ -217,35 +200,25 @@ export default function Dashboard() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
           {filteredProjects.map((project) => {
-            const isMock = 'isMock' in project && project.isMock;
             return (
               <Card
                 key={project.id}
-                className={`transition-colors flex flex-col ${isMock ? "opacity-70 border-dashed hover:border-primary/30" : "hover:border-primary/50"}`}
+                className="transition-colors flex flex-col hover:border-primary/50"
                 data-testid={`card-project-${project.id}`}
               >
                 <CardHeader className="pb-3">
                   <div className="flex justify-between items-start gap-2">
                     <div className="flex-1 min-w-0">
                       <CardTitle className="text-lg mb-1 line-clamp-1">
-                        {isMock ? (
-                          <span className="text-muted-foreground">{project.name}</span>
-                        ) : (
-                          <Link href={`/projects/${project.id}`} className="hover:underline" data-testid={`link-project-${project.id}`}>
-                            {project.name}
-                          </Link>
-                        )}
+                        <Link href={`/projects/${project.id}`} className="hover:underline" data-testid={`link-project-${project.id}`}>
+                          {project.name}
+                        </Link>
                       </CardTitle>
                       <CardDescription className="capitalize flex items-center gap-2">
                         {t(`dashboard.type.${project.type}` as Parameters<typeof t>[0])}
                       </CardDescription>
                     </div>
                     <div className="flex flex-col items-end gap-1 shrink-0">
-                      {isMock && (
-                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/40 text-primary/70">
-                          Ejemplo
-                        </Badge>
-                      )}
                       <Badge
                         variant={statusVariant[project.status] ?? "outline"}
                         className="text-xs capitalize"
@@ -281,21 +254,9 @@ export default function Dashboard() {
                   <span className="text-xs text-muted-foreground">
                     {t('dashboard.project.updated')} {formatDistanceToNow(new Date(project.updatedAt), { addSuffix: true, locale })}
                   </span>
-                  {isMock ? (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 text-xs text-primary/70"
-                      onClick={() => setIsCreating(true)}
-                      data-testid={`button-open-project-${project.id}`}
-                    >
-                      <Plus className="w-3 h-3 mr-1" /> {t('dashboard.create')}
-                    </Button>
-                  ) : (
-                    <Button size="sm" variant="ghost" asChild className="h-7 text-xs" data-testid={`button-open-project-${project.id}`}>
-                      <Link href={`/projects/${project.id}`}>{t('dashboard.project.open')}</Link>
-                    </Button>
-                  )}
+                  <Button size="sm" variant="ghost" asChild className="h-7 text-xs" data-testid={`button-open-project-${project.id}`}>
+                    <Link href={`/projects/${project.id}`}>{t('dashboard.project.open')}</Link>
+                  </Button>
                 </CardFooter>
               </Card>
             );

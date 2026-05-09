@@ -12,17 +12,19 @@ if (!rawUrl) {
   );
 }
 
-function cleanConnectionString(url: string): string {
+function buildConnectionString(url: string): string {
   try {
     const u = new URL(url);
     u.searchParams.delete("channel_binding");
+    // Switch from Neon pooler to direct connection (pooler breaks Drizzle prepared statements)
+    u.hostname = u.hostname.replace("-pooler.", ".");
     return u.toString();
   } catch {
     return url;
   }
 }
 
-const connectionString = cleanConnectionString(rawUrl);
+const connectionString = buildConnectionString(rawUrl);
 const isNeon = !!process.env.NEON_DATABASE_URL;
 
 export const pool = new Pool({
