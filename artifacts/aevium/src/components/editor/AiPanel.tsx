@@ -728,20 +728,24 @@ export function AiPanel({ projectId, sceneId, chapterId, onInsertText, onReplace
       )}
       {/* Facts extraction dialog */}
       <Dialog open={showFactsDialog} onOpenChange={(o) => { setShowFactsDialog(o); if (!o) setEditingMemory(null); }}>
-        <DialogContent className="max-w-2xl w-full max-h-[80vh] flex flex-col gap-0 p-0">
-          <DialogHeader className="px-6 pt-5 pb-3 border-b shrink-0">
-            <DialogTitle className="flex items-center gap-2 text-base">
-              <BookMarked className="w-4 h-4 text-secondary" />
-              {t("ai.memorySuggestions")}
-              <Badge variant="secondary" className="ml-1 text-xs">{memorySuggestions.length}</Badge>
-            </DialogTitle>
-            <p className="text-xs text-muted-foreground mt-0.5">{t("ai.factsDialogHint")}</p>
-          </DialogHeader>
+        <DialogContent className="max-w-xl w-full" style={{ maxHeight: "85vh", display: "flex", flexDirection: "column", padding: 0, gap: 0 }}>
+          {/* Header */}
+          <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b shrink-0">
+            <div>
+              <div className="flex items-center gap-2">
+                <BookMarked className="w-4 h-4 text-secondary" />
+                <span className="font-semibold text-sm">{t("ai.memorySuggestions")}</span>
+                <Badge variant="secondary" className="text-xs">{memorySuggestions.length}</Badge>
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">{t("ai.factsDialogHint")}</p>
+            </div>
+          </div>
 
-          <ScrollArea className="flex-1 min-h-0 px-6 py-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* Scrollable list */}
+          <div style={{ overflowY: "auto", flex: 1, padding: "16px 20px" }}>
+            <div className="flex flex-col gap-3">
               {memorySuggestions.map((s, i) => (
-                <div key={i} className="border rounded-lg p-3 flex flex-col gap-2 bg-card">
+                <div key={i} className="rounded-lg border bg-card p-4">
                   {editingMemory?.index === i ? (
                     <div className="flex flex-col gap-2">
                       <Input
@@ -753,11 +757,11 @@ export function AiPanel({ projectId, sceneId, chapterId, onInsertText, onReplace
                       <Textarea
                         value={editingMemory.content}
                         onChange={(e) => setEditingMemory({ ...editingMemory, content: e.target.value })}
-                        className="text-sm min-h-[72px] resize-none"
+                        className="text-sm min-h-[80px] resize-none"
                         rows={3}
                       />
                       <div className="flex gap-2">
-                        <Button size="sm" className="flex-1 h-7 text-xs" onClick={() => handleSaveMemory(i, editingMemory.title, editingMemory.content)}>
+                        <Button size="sm" className="h-7 text-xs" onClick={() => handleSaveMemory(i, editingMemory.title, editingMemory.content)}>
                           <Check className="w-3 h-3 mr-1" />{t("ai.save")}
                         </Button>
                         <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setEditingMemory(null)}>
@@ -766,33 +770,34 @@ export function AiPanel({ projectId, sceneId, chapterId, onInsertText, onReplace
                       </div>
                     </div>
                   ) : (
-                    <>
-                      <div className="flex items-center justify-between gap-2">
-                        <Badge variant="outline" className="text-[10px] capitalize">{s.type.replace("_", " ")}</Badge>
-                        <span className="text-[10px] text-muted-foreground shrink-0">{s.confidence}%</span>
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-[10px] capitalize shrink-0">{s.type.replace(/_/g, " ")}</Badge>
+                        <span className="text-[10px] text-muted-foreground ml-auto shrink-0">{s.confidence}%</span>
                       </div>
                       <p className="text-sm font-semibold leading-snug">{s.title}</p>
                       <p className="text-xs text-muted-foreground leading-relaxed">{s.content}</p>
-                      <div className="flex gap-1.5 mt-auto pt-1">
-                        <Button size="sm" className="h-7 text-xs flex-1" onClick={() => handleSaveMemory(i, s.title, s.content)}>
+                      <div className="flex items-center gap-2 pt-2 border-t mt-1">
+                        <Button size="sm" className="h-7 text-xs" onClick={() => handleSaveMemory(i, s.title, s.content)}>
                           <CheckCircle2 className="w-3 h-3 mr-1" />{t("ai.save")}
                         </Button>
-                        <Button size="sm" variant="outline" className="h-7 text-xs px-2" onClick={() => setEditingMemory({ index: i, title: s.title, content: s.content })}>
-                          <Edit2 className="w-3 h-3" />
+                        <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setEditingMemory({ index: i, title: s.title, content: s.content })}>
+                          <Edit2 className="w-3 h-3 mr-1" />{t("ai.edit")}
                         </Button>
-                        <Button size="sm" variant="ghost" className="h-7 text-xs px-2 text-muted-foreground hover:text-destructive" onClick={() => setMemorySuggestions((p) => p.filter((_, j) => j !== i))}>
-                          <XCircle className="w-3 h-3" />
+                        <Button size="sm" variant="ghost" className="h-7 text-xs ml-auto text-muted-foreground hover:text-destructive" onClick={() => setMemorySuggestions((p) => p.filter((_, j) => j !== i))}>
+                          <XCircle className="w-3 h-3 mr-1" />{t("ai.ignore")}
                         </Button>
                       </div>
-                    </>
+                    </div>
                   )}
                 </div>
               ))}
             </div>
-          </ScrollArea>
+          </div>
 
-          <DialogFooter className="px-6 py-4 border-t shrink-0 flex-row gap-2">
-            <Button variant="ghost" className="mr-auto text-xs h-8" onClick={() => setShowFactsDialog(false)}>
+          {/* Footer */}
+          <div className="flex items-center justify-between px-5 py-3 border-t shrink-0">
+            <Button variant="ghost" className="text-xs h-8" onClick={() => setShowFactsDialog(false)}>
               {t("form.cancel")}
             </Button>
             <Button
@@ -803,7 +808,7 @@ export function AiPanel({ projectId, sceneId, chapterId, onInsertText, onReplace
               <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
               {t("ai.saveAll")} ({memorySuggestions.length})
             </Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
