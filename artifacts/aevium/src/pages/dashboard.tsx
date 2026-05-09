@@ -4,10 +4,13 @@ import { useI18n } from "@/lib/i18n";
 import { Link, useLocation } from "wouter";
 import { formatDistanceToNow } from "date-fns";
 import { es, enUS, type Locale } from "date-fns/locale";
-import { BookOpen, FileText, Plus, Layout, History, Search, Globe } from "lucide-react";
+import {
+  BookOpen, FileText, Plus, Layout, Search, Globe,
+  ArrowRight, AlertTriangle, Zap, BarChart3, Layers,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,6 +28,44 @@ const statusVariant: Record<string, "default" | "secondary" | "outline"> = {
 };
 
 const dateFnsLocale: Record<string, Locale> = { es, en: enUS };
+
+interface LastScene {
+  sceneId: number;
+  sceneTitle: string;
+  chapterId: number;
+  updatedAt: string;
+  projectId: number;
+  projectName: string;
+}
+
+interface GlobalStats {
+  totalWords: number;
+  totalScenes: number;
+  totalProjects: number;
+  totalAlerts: number;
+}
+
+interface ProjectLastScene {
+  id: number;
+  title: string;
+  chapterId: number;
+  updatedAt: string;
+}
+
+interface EnrichedProject {
+  id: number;
+  name: string;
+  type: string;
+  status: string;
+  primaryLanguage: string;
+  updatedAt: string;
+  totalBooks: number;
+  totalChapters: number;
+  totalScenes: number;
+  totalWords: number;
+  pendingAlerts: number;
+  lastScene: ProjectLastScene | null;
+}
 
 export default function Dashboard() {
   const { t, lang } = useI18n();
@@ -68,7 +109,9 @@ export default function Dashboard() {
     });
   };
 
-  const allProjects = dashboard?.projects ?? [];
+  const allProjects = (dashboard?.projects ?? []) as unknown as EnrichedProject[];
+  const lastEditedScene = (dashboard as { lastEditedScene?: LastScene } | undefined)?.lastEditedScene ?? null;
+  const globalStats = (dashboard as { globalStats?: GlobalStats } | undefined)?.globalStats ?? null;
 
   const filteredProjects = useMemo(() => {
     return allProjects.filter((p) => {
@@ -78,8 +121,6 @@ export default function Dashboard() {
     });
   }, [allProjects, searchQuery, filterType]);
 
-  const recentActivity = dashboard?.recentActivity ?? [];
-
   if (isLoading) {
     return (
       <div className="w-full max-w-6xl mx-auto px-6 py-8 space-y-8">
@@ -87,6 +128,7 @@ export default function Dashboard() {
           <Skeleton className="h-10 w-48" />
           <Skeleton className="h-10 w-32" />
         </div>
+        <Skeleton className="h-20 w-full" />
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <Skeleton className="h-48 w-full" />
           <Skeleton className="h-48 w-full" />
@@ -98,6 +140,7 @@ export default function Dashboard() {
 
   return (
     <div className="w-full max-w-6xl mx-auto px-6 py-8">
+      {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold tracking-tight" data-testid="text-dashboard-title">
           {t('dashboard.title')}
@@ -161,6 +204,57 @@ export default function Dashboard() {
         </Dialog>
       </div>
 
+      {/* "Continue here" banner */}
+      {lastEditedScene && (
+        <div className="mb-6 rounded-xl border border-primary/30 bg-primary/5 p-4 flex items-center gap-4">
+          <div className="w-10 h-10 rounded-full bg-primary/15 text-primary flex items-center justify-center shrink-0">
+            <Zap className="w-5 h-5" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-muted-foreground mb-0.5">{t('dashboard.continueHere')}</p>
+            <p className="font-medium text-sm text-foreground truncate">
+              {lastEditedScene.sceneTitle}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {lastEditedScene.projectName} · {formatDistanceToNow(new Date(lastEditedScene.updatedAt), { addSuffix: true, locale })}
+            </p>
+          </div>
+          <Button size="sm" asChild className="shrink-0 gap-1.5">
+            <Link href={`/projects/${lastEditedScene.projectId}`}>
+              {t('dashboard.continueBtn')} <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </Button>
+        </div>
+      )}
+
+      {/* Global stats bar */}
+      {globalStats && globalStats.totalProjects > 0 && (
+        <div className="mb-8 grid grid-cols-3 gap-3">
+          <div className="rounded-lg border bg-card px-4 py-3 flex items-center gap-3">
+            <BarChart3 className="w-4 h-4 text-primary shrink-0" />
+            <div>
+              <p className="text-xl font-bold leading-none">{globalStats.totalWords.toLocaleString()}</p>
+              <p className="text-xs text-muted-foreground mt-1">{t('dashboard.stats.totalWords')}</p>
+            </div>
+          </div>
+          <div className="rounded-lg border bg-card px-4 py-3 flex items-center gap-3">
+            <FileText className="w-4 h-4 text-primary shrink-0" />
+            <div>
+              <p className="text-xl font-bold leading-none">{globalStats.totalScenes}</p>
+              <p className="text-xs text-muted-foreground mt-1">{t('dashboard.stats.totalScenes')}</p>
+            </div>
+          </div>
+          <div className="rounded-lg border bg-card px-4 py-3 flex items-center gap-3">
+            <Layers className="w-4 h-4 text-primary shrink-0" />
+            <div>
+              <p className="text-xl font-bold leading-none">{globalStats.totalProjects}</p>
+              <p className="text-xs text-muted-foreground mt-1">{t('dashboard.stats.totalProjects')}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Search and filter */}
       {allProjects.length > 0 && (
         <div className="flex gap-3 mb-6">
           <div className="relative flex-1 max-w-sm">
@@ -189,6 +283,7 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* Project grid */}
       {filteredProjects.length === 0 && allProjects.length === 0 ? (
         <div className="text-center py-20 bg-muted/30 rounded-xl border border-dashed" data-testid="status-empty-projects">
           <Layout className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
@@ -198,101 +293,96 @@ export default function Dashboard() {
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-          {filteredProjects.map((project) => {
-            return (
-              <Card
-                key={project.id}
-                className="transition-colors flex flex-col hover:border-primary/50"
-                data-testid={`card-project-${project.id}`}
-              >
-                <CardHeader className="pb-3">
-                  <div className="flex justify-between items-start gap-2">
-                    <div className="flex-1 min-w-0">
-                      <CardTitle className="text-lg mb-1 line-clamp-1">
-                        <Link href={`/projects/${project.id}`} className="hover:underline" data-testid={`link-project-${project.id}`}>
-                          {project.name}
-                        </Link>
-                      </CardTitle>
-                      <CardDescription className="capitalize flex items-center gap-2">
-                        {t(`dashboard.type.${project.type}` as Parameters<typeof t>[0])}
-                      </CardDescription>
-                    </div>
-                    <div className="flex flex-col items-end gap-1 shrink-0">
-                      <Badge
-                        variant={statusVariant[project.status] ?? "outline"}
-                        className="text-xs capitalize"
-                        data-testid={`badge-status-${project.id}`}
-                      >
-                        {t(`project.status.${project.status}` as Parameters<typeof t>[0])}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredProjects.map((project) => (
+            <Card
+              key={project.id}
+              className="transition-colors flex flex-col hover:border-primary/50"
+              data-testid={`card-project-${project.id}`}
+            >
+              <CardHeader className="pb-3">
+                <div className="flex justify-between items-start gap-2">
+                  <div className="flex-1 min-w-0">
+                    <CardTitle className="text-lg mb-1 line-clamp-1">
+                      <Link href={`/projects/${project.id}`} className="hover:underline" data-testid={`link-project-${project.id}`}>
+                        {project.name}
+                      </Link>
+                    </CardTitle>
+                    <CardDescription className="capitalize">
+                      {t(`dashboard.type.${project.type}` as Parameters<typeof t>[0])}
+                    </CardDescription>
+                  </div>
+                  <div className="flex flex-col items-end gap-1.5 shrink-0">
+                    <Badge
+                      variant={statusVariant[project.status] ?? "outline"}
+                      className="text-xs capitalize"
+                      data-testid={`badge-status-${project.id}`}
+                    >
+                      {t(`project.status.${project.status}` as Parameters<typeof t>[0])}
+                    </Badge>
+                    {project.pendingAlerts > 0 && (
+                      <Badge variant="destructive" className="text-xs gap-1">
+                        <AlertTriangle className="w-2.5 h-2.5" />
+                        {project.pendingAlerts} {t('dashboard.alerts')}
                       </Badge>
-                    </div>
+                    )}
                   </div>
-                </CardHeader>
-                <CardContent className="flex-1 pb-3">
-                  <div className="flex flex-wrap gap-3 text-sm text-muted-foreground mb-3">
-                    <div className="flex items-center gap-1.5" title={t('dashboard.stats.books')}>
-                      <BookOpen className="w-3.5 h-3.5" /> {project.totalBooks}
-                    </div>
-                    <div className="flex items-center gap-1.5" title={t('dashboard.stats.chapters')}>
-                      <FileText className="w-3.5 h-3.5" /> {project.totalChapters}
-                    </div>
-                    <div className="flex items-center gap-1.5" title={t('dashboard.stats.words')}>
-                      <span className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">
-                        {project.totalWords.toLocaleString()} w
-                      </span>
-                    </div>
+                </div>
+              </CardHeader>
+
+              <CardContent className="flex-1 pb-3">
+                {/* Stats row */}
+                <div className="flex flex-wrap gap-3 text-sm text-muted-foreground mb-3">
+                  <div className="flex items-center gap-1.5" title={t('dashboard.stats.books')}>
+                    <BookOpen className="w-3.5 h-3.5" /> {project.totalBooks}
                   </div>
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <Globe className="w-3 h-3" />
-                    <span data-testid={`text-language-${project.id}`}>
-                      {t(`project.language.${project.primaryLanguage}` as Parameters<typeof t>[0])}
+                  <div className="flex items-center gap-1.5" title={t('dashboard.stats.chapters')}>
+                    <FileText className="w-3.5 h-3.5" /> {project.totalChapters}
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">
+                      {project.totalWords.toLocaleString()} w
                     </span>
                   </div>
-                </CardContent>
-                <CardFooter className="flex justify-between border-t mt-auto pt-3 pb-3 bg-muted/10 rounded-b-xl">
+                </div>
+
+                {/* Progress bar: scenes with content vs total */}
+                {project.totalScenes > 0 && (
+                  <div className="space-y-1.5 mb-3">
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>{t('dashboard.stats.scenes')}: {project.totalScenes}</span>
+                      {project.totalWords > 0 && (
+                        <span>{Math.round(project.totalWords / Math.max(project.totalScenes, 1))} w/{t('dashboard.stats.perScene')}</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Globe className="w-3 h-3" />
+                  <span data-testid={`text-language-${project.id}`}>
+                    {t(`project.language.${project.primaryLanguage}` as Parameters<typeof t>[0])}
+                  </span>
+                </div>
+              </CardContent>
+
+              <CardFooter className="flex justify-between border-t mt-auto pt-3 pb-3 bg-muted/10 rounded-b-xl gap-2">
+                <div className="flex flex-col min-w-0">
                   <span className="text-xs text-muted-foreground">
                     {t('dashboard.project.updated')} {formatDistanceToNow(new Date(project.updatedAt), { addSuffix: true, locale })}
                   </span>
-                  <Button size="sm" variant="ghost" asChild className="h-7 text-xs" data-testid={`button-open-project-${project.id}`}>
-                    <Link href={`/projects/${project.id}`}>{t('dashboard.project.open')}</Link>
-                  </Button>
-                </CardFooter>
-              </Card>
-            );
-          })}
-        </div>
-      )}
-
-      {recentActivity.length > 0 && (
-        <div className="mt-12">
-          <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
-            <History className="w-5 h-5 text-muted-foreground" />
-            {t('dashboard.recent')}
-          </h2>
-          <div className="space-y-4">
-            {recentActivity.map((activity, i) => (
-              <div
-                key={i}
-                className="flex items-start gap-4 p-4 rounded-lg border bg-card text-sm"
-                data-testid={`row-activity-${i}`}
-              >
-                <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                  <FileText className="w-4 h-4" />
+                  {project.lastScene && (
+                    <span className="text-xs text-primary truncate mt-0.5">
+                      ↳ {project.lastScene.title}
+                    </span>
+                  )}
                 </div>
-                <div className="flex-1">
-                  <p>
-                    <span className="font-medium text-foreground">{activity.projectName}</span>
-                    <span className="text-muted-foreground mx-1">·</span>
-                    {activity.entityName}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {formatDistanceToNow(new Date(activity.updatedAt), { addSuffix: true, locale })}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
+                <Button size="sm" variant="ghost" asChild className="h-7 text-xs shrink-0" data-testid={`button-open-project-${project.id}`}>
+                  <Link href={`/projects/${project.id}`}>{t('dashboard.project.open')}</Link>
+                </Button>
+              </CardFooter>
+            </Card>
+          ))}
         </div>
       )}
     </div>
