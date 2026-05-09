@@ -14,8 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Plus, MoreHorizontal, Pencil, Trash2, Calendar } from "lucide-react";
+import { Plus, Trash2, Calendar } from "lucide-react";
 
 const EVENT_TYPES: CreateTimelineEventBodyEventType[] = ["death", "injury", "travel", "revelation", "conflict", "romance", "political", "worldbuilding", "other"];
 
@@ -91,7 +90,8 @@ export function TimelinePanel({ projectId }: TimelinePanelProps) {
     }
   };
 
-  const remove = (id: number) => {
+  const remove = (e: React.MouseEvent, id: number) => {
+    e.stopPropagation();
     del.mutate({ projectId, id }, {
       onSuccess: () => qc.invalidateQueries({ queryKey: getListTimelineEventsQueryKey(projectId) }),
       onError: () => toast({ title: t('form.delete'), variant: "destructive" }),
@@ -121,7 +121,10 @@ export function TimelinePanel({ projectId }: TimelinePanelProps) {
             {sorted.map((ev) => (
               <div key={ev.id} className="relative group" data-testid={`item-event-${ev.id}`}>
                 <div className={`absolute -left-[17px] top-2 w-2.5 h-2.5 rounded-full border-2 border-background ${EVENT_TYPE_DOT[ev.eventType] ?? "bg-muted-foreground"}`} />
-                <div className="p-2 rounded-md bg-muted/40 text-xs">
+                <div
+                  className="p-2 rounded-md bg-muted/40 text-xs cursor-pointer hover:bg-muted/70 transition-colors"
+                  onClick={() => openEdit(ev)}
+                >
                   <div className="flex items-start justify-between gap-1">
                     <div className="flex-1 min-w-0">
                       {ev.dateLabel && (
@@ -137,17 +140,15 @@ export function TimelinePanel({ projectId }: TimelinePanelProps) {
                         )}
                       </div>
                     </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="w-5 h-5 opacity-0 group-hover:opacity-100 shrink-0" data-testid={`button-event-menu-${ev.id}`}>
-                          <MoreHorizontal className="w-3 h-3" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent>
-                        <DropdownMenuItem onClick={() => openEdit(ev)} data-testid={`button-edit-event-${ev.id}`}><Pencil className="w-3.5 h-3.5 mr-2" />{t('form.edit')}</DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive" onClick={() => remove(ev.id)} data-testid={`button-delete-event-${ev.id}`}><Trash2 className="w-3.5 h-3.5 mr-2" />{t('form.delete')}</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="w-5 h-5 opacity-0 group-hover:opacity-100 shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={(e) => remove(e, ev.id)}
+                      data-testid={`button-delete-event-${ev.id}`}
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
                   </div>
                 </div>
               </div>

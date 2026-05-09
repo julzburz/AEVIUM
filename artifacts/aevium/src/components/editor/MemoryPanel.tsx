@@ -19,8 +19,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Users, Map, Globe, BookMarked, Plus, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { Users, Map, Globe, BookMarked, Plus, Trash2 } from "lucide-react";
 
 type MemSubTab = "characters" | "locations" | "worldRules" | "items";
 
@@ -58,7 +57,8 @@ function CharactersTab({ projectId }: { projectId: number }) {
     }
   };
 
-  const remove = (id: number) => {
+  const remove = (e: React.MouseEvent, id: number) => {
+    e.stopPropagation();
     del.mutate({ projectId, id }, {
       onSuccess: () => qc.invalidateQueries({ queryKey: getListCharactersQueryKey(projectId) }),
       onError: () => toast({ title: t('form.delete'), variant: "destructive" }),
@@ -84,22 +84,27 @@ function CharactersTab({ projectId }: { projectId: number }) {
       {items.length === 0 ? <p className="text-xs text-muted-foreground py-2">{t('editor.noCharacters')}</p> : (
         <div className="space-y-2">
           {items.map((c) => (
-            <div key={c.id} className="p-2 rounded-md bg-muted/40 text-xs group relative" data-testid={`item-character-${c.id}`}>
+            <div
+              key={c.id}
+              className="p-2 rounded-md bg-muted/40 text-xs group relative cursor-pointer hover:bg-muted/70 transition-colors"
+              onClick={() => openEdit(c)}
+              data-testid={`item-character-${c.id}`}
+            >
               <div className="flex items-start justify-between gap-1">
                 <div>
                   <p className="font-medium text-foreground">{c.name}</p>
                   <p className="text-muted-foreground capitalize">{t(`editor.role.${c.role}` as Parameters<typeof t>[0])}</p>
                   {c.motivations && <p className="text-muted-foreground mt-0.5 line-clamp-1">{c.motivations}</p>}
                 </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="w-5 h-5 opacity-0 group-hover:opacity-100 shrink-0" data-testid={`button-character-menu-${c.id}`}><MoreHorizontal className="w-3 h-3" /></Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuItem onClick={() => openEdit(c)} data-testid={`button-edit-character-${c.id}`}><Pencil className="w-3.5 h-3.5 mr-2" />{t('form.edit')}</DropdownMenuItem>
-                    <DropdownMenuItem className="text-destructive" onClick={() => remove(c.id)} data-testid={`button-delete-character-${c.id}`}><Trash2 className="w-3.5 h-3.5 mr-2" />{t('form.delete')}</DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="w-5 h-5 opacity-0 group-hover:opacity-100 shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  onClick={(e) => remove(e, c.id)}
+                  data-testid={`button-delete-character-${c.id}`}
+                >
+                  <Trash2 className="w-3 h-3" />
+                </Button>
               </div>
             </div>
           ))}
@@ -167,7 +172,8 @@ function LocationsTab({ projectId }: { projectId: number }) {
     }
   };
 
-  const remove = (id: number) => {
+  const remove = (e: React.MouseEvent, id: number) => {
+    e.stopPropagation();
     del.mutate({ projectId, id }, { onSuccess: () => qc.invalidateQueries({ queryKey: getListLocationsQueryKey(projectId) }), onError: () => toast({ title: t('form.delete'), variant: "destructive" }) });
   };
 
@@ -179,16 +185,23 @@ function LocationsTab({ projectId }: { projectId: number }) {
       {items.length === 0 ? <p className="text-xs text-muted-foreground py-2">{t('editor.noLocations')}</p> : (
         <div className="space-y-2">
           {items.map((l) => (
-            <div key={l.id} className="p-2 rounded-md bg-muted/40 text-xs group relative" data-testid={`item-location-${l.id}`}>
+            <div
+              key={l.id}
+              className="p-2 rounded-md bg-muted/40 text-xs group relative cursor-pointer hover:bg-muted/70 transition-colors"
+              onClick={() => openEdit(l)}
+              data-testid={`item-location-${l.id}`}
+            >
               <div className="flex items-start justify-between gap-1">
                 <div><p className="font-medium text-foreground">{l.name}</p>{l.description && <p className="text-muted-foreground line-clamp-2">{l.description}</p>}</div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="w-5 h-5 opacity-0 group-hover:opacity-100 shrink-0" data-testid={`button-location-menu-${l.id}`}><MoreHorizontal className="w-3 h-3" /></Button></DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuItem onClick={() => openEdit(l)} data-testid={`button-edit-location-${l.id}`}><Pencil className="w-3.5 h-3.5 mr-2" />{t('form.edit')}</DropdownMenuItem>
-                    <DropdownMenuItem className="text-destructive" onClick={() => remove(l.id)} data-testid={`button-delete-location-${l.id}`}><Trash2 className="w-3.5 h-3.5 mr-2" />{t('form.delete')}</DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="w-5 h-5 opacity-0 group-hover:opacity-100 shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  onClick={(e) => remove(e, l.id)}
+                  data-testid={`button-delete-location-${l.id}`}
+                >
+                  <Trash2 className="w-3 h-3" />
+                </Button>
               </div>
             </div>
           ))}
@@ -242,7 +255,8 @@ function WorldRulesTab({ projectId }: { projectId: number }) {
     }
   };
 
-  const remove = (id: number) => {
+  const remove = (e: React.MouseEvent, id: number) => {
+    e.stopPropagation();
     del.mutate({ projectId, id }, { onSuccess: () => qc.invalidateQueries({ queryKey: getListWorldRulesQueryKey(projectId) }), onError: () => toast({ title: t('form.delete'), variant: "destructive" }) });
   };
 
@@ -254,16 +268,23 @@ function WorldRulesTab({ projectId }: { projectId: number }) {
       {items.length === 0 ? <p className="text-xs text-muted-foreground py-2">{t('editor.noWorldRules')}</p> : (
         <div className="space-y-2">
           {items.map((r) => (
-            <div key={r.id} className="p-2 rounded-md bg-muted/40 text-xs group relative" data-testid={`item-world-rule-${r.id}`}>
+            <div
+              key={r.id}
+              className="p-2 rounded-md bg-muted/40 text-xs group relative cursor-pointer hover:bg-muted/70 transition-colors"
+              onClick={() => openEdit(r)}
+              data-testid={`item-world-rule-${r.id}`}
+            >
               <div className="flex items-start justify-between gap-1">
                 <div><p className="font-medium text-foreground">{r.title}{r.category && <span className="ml-1 text-muted-foreground">· {r.category}</span>}</p><p className="text-muted-foreground line-clamp-2">{r.content}</p></div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="w-5 h-5 opacity-0 group-hover:opacity-100 shrink-0" data-testid={`button-rule-menu-${r.id}`}><MoreHorizontal className="w-3 h-3" /></Button></DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuItem onClick={() => openEdit(r)} data-testid={`button-edit-rule-${r.id}`}><Pencil className="w-3.5 h-3.5 mr-2" />{t('form.edit')}</DropdownMenuItem>
-                    <DropdownMenuItem className="text-destructive" onClick={() => remove(r.id)} data-testid={`button-delete-rule-${r.id}`}><Trash2 className="w-3.5 h-3.5 mr-2" />{t('form.delete')}</DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="w-5 h-5 opacity-0 group-hover:opacity-100 shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  onClick={(e) => remove(e, r.id)}
+                  data-testid={`button-delete-rule-${r.id}`}
+                >
+                  <Trash2 className="w-3 h-3" />
+                </Button>
               </div>
             </div>
           ))}
@@ -317,7 +338,8 @@ function MemoryItemsTab({ projectId }: { projectId: number }) {
     }
   };
 
-  const remove = (id: number) => {
+  const remove = (e: React.MouseEvent, id: number) => {
+    e.stopPropagation();
     del.mutate({ projectId, id }, { onSuccess: () => qc.invalidateQueries({ queryKey: getListMemoryItemsQueryKey(projectId) }), onError: () => toast({ title: t('form.delete'), variant: "destructive" }) });
   };
 
@@ -329,20 +351,27 @@ function MemoryItemsTab({ projectId }: { projectId: number }) {
       {items.length === 0 ? <p className="text-xs text-muted-foreground py-2">{t('editor.noMemory')}</p> : (
         <div className="space-y-2">
           {items.map((m) => (
-            <div key={m.id} className="p-2 rounded-md bg-muted/40 text-xs group relative" data-testid={`item-memory-${m.id}`}>
+            <div
+              key={m.id}
+              className="p-2 rounded-md bg-muted/40 text-xs group relative cursor-pointer hover:bg-muted/70 transition-colors"
+              onClick={() => openEdit(m)}
+              data-testid={`item-memory-${m.id}`}
+            >
               <div className="flex items-start justify-between gap-1">
                 <div>
                   <p className="font-medium text-foreground">{m.title}</p>
                   <p className="text-muted-foreground capitalize text-[10px]">{t(`editor.memoryItem.type.${m.type}` as Parameters<typeof t>[0])} · {t(`editor.memoryItem.scope.${m.scope}` as Parameters<typeof t>[0])}</p>
                   <p className="text-muted-foreground line-clamp-2">{m.content}</p>
                 </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="w-5 h-5 opacity-0 group-hover:opacity-100 shrink-0" data-testid={`button-memory-menu-${m.id}`}><MoreHorizontal className="w-3 h-3" /></Button></DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuItem onClick={() => openEdit(m)} data-testid={`button-edit-memory-${m.id}`}><Pencil className="w-3.5 h-3.5 mr-2" />{t('form.edit')}</DropdownMenuItem>
-                    <DropdownMenuItem className="text-destructive" onClick={() => remove(m.id)} data-testid={`button-delete-memory-${m.id}`}><Trash2 className="w-3.5 h-3.5 mr-2" />{t('form.delete')}</DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="w-5 h-5 opacity-0 group-hover:opacity-100 shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  onClick={(e) => remove(e, m.id)}
+                  data-testid={`button-delete-memory-${m.id}`}
+                >
+                  <Trash2 className="w-3 h-3" />
+                </Button>
               </div>
             </div>
           ))}
