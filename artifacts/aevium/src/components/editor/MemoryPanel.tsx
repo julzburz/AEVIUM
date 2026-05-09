@@ -381,33 +381,35 @@ function MemoryItemsTab({ projectId }: { projectId: number }) {
         <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={openNew} data-testid="button-new-memory-item"><Plus className="w-3 h-3" />{t('editor.newMemoryItem')}</Button>
       </div>
       {items.length === 0 ? <p className="text-xs text-muted-foreground py-2">{t('editor.noMemory')}</p> : (
-        <div className="space-y-2">
-          {items.map((m) => (
-            <div
-              key={m.id}
-              className="p-2 rounded-md bg-muted/40 text-xs group relative cursor-pointer hover:bg-secondary/15 transition-colors"
-              onClick={() => openEdit(m)}
-              data-testid={`item-memory-${m.id}`}
-            >
-              <div className="flex items-start justify-between gap-1">
-                <div>
-                  <p className="font-medium text-foreground">{m.title}</p>
-                  <p className="text-muted-foreground capitalize text-[10px]">{t(`editor.memoryItem.type.${m.type}` as Parameters<typeof t>[0])} · {t(`editor.memoryItem.scope.${m.scope}` as Parameters<typeof t>[0])}</p>
-                  <p className="text-muted-foreground line-clamp-2">{m.content}</p>
+        <ScrollArea className="max-h-[60vh]">
+          <div className="space-y-2 pr-1">
+            {items.map((m) => (
+              <div
+                key={m.id}
+                className="p-2 rounded-md bg-muted/40 text-xs group relative cursor-pointer hover:bg-secondary/15 transition-colors"
+                onClick={() => openEdit(m)}
+                data-testid={`item-memory-${m.id}`}
+              >
+                <div className="flex items-start justify-between gap-1">
+                  <div>
+                    <p className="font-medium text-foreground">{m.title}</p>
+                    <p className="text-muted-foreground capitalize text-[10px]">{t(`editor.memoryItem.type.${m.type}` as Parameters<typeof t>[0])} · {t(`editor.memoryItem.scope.${m.scope}` as Parameters<typeof t>[0])}</p>
+                    <p className="text-muted-foreground line-clamp-2">{m.content}</p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="w-5 h-5 opacity-0 group-hover:opacity-100 shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={(e) => remove(e, m.id)}
+                    data-testid={`button-delete-memory-${m.id}`}
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </Button>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="w-5 h-5 opacity-0 group-hover:opacity-100 shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
-                  onClick={(e) => remove(e, m.id)}
-                  data-testid={`button-delete-memory-${m.id}`}
-                >
-                  <Trash2 className="w-3 h-3" />
-                </Button>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </ScrollArea>
       )}
       <Dialog open={editing !== null} onOpenChange={(o) => { if (!o) setEditing(null); }}>
         <DialogContent className="max-w-sm">
