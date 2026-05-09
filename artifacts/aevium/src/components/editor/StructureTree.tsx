@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   ChevronRight, ChevronDown, FileText, BookOpen,
-  Plus, Pencil, Trash2, MoreHorizontal, Copy, ArrowUp, ArrowDown,
+  Plus, Pencil, Trash2, MoreHorizontal, Copy, ArrowUp, ArrowDown, GitMerge,
 } from "lucide-react";
 
 const sceneStatusDot: Record<string, string> = {
@@ -48,6 +48,12 @@ interface StructureTreeProps {
     sceneTitle: string,
     bookId: number,
   ) => void;
+  onSelectChapter?: (
+    chapterId: number,
+    bookTitle: string,
+    chapterTitle: string,
+    bookId: number,
+  ) => void;
 }
 
 function ChapterRow({
@@ -57,6 +63,7 @@ function ChapterRow({
   chapterList,
   selectedSceneId,
   onSelectScene,
+  onSelectChapter,
   onRename,
   onDeleteChapter,
   onMoveChapter,
@@ -71,6 +78,7 @@ function ChapterRow({
   book: { id: number; title: string };
   selectedSceneId: number | null;
   onSelectScene: StructureTreeProps["onSelectScene"];
+  onSelectChapter?: StructureTreeProps["onSelectChapter"];
   onRename: (target: RenameTarget) => void;
   onDeleteChapter: (bookId: number, chapterId: number, e: React.MouseEvent) => void;
   onMoveChapter: (chapterId: number, dir: "up" | "down") => void;
@@ -172,6 +180,33 @@ function ChapterRow({
     });
   };
 
+  const handleMergeWithNext = async (scene: { id: number; title: string }, nextScene: { id: number }, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const [sceneData, nextData] = await Promise.all([
+        customFetch<Record<string, unknown>>(`/api/chapters/${chapter.id}/scenes/${scene.id}`),
+        customFetch<Record<string, unknown>>(`/api/chapters/${chapter.id}/scenes/${nextScene.id}`),
+      ]);
+      const mergedContent = [(sceneData.content as string) ?? "", (nextData.content as string) ?? ""]
+        .filter(Boolean).join("\n\n");
+      const mergedWordCount = ((sceneData.wordCount as number) ?? 0) + ((nextData.wordCount as number) ?? 0);
+      updateScene.mutate(
+        { chapterId: chapter.id, id: scene.id, data: { content: mergedContent, wordCount: mergedWordCount } },
+        {
+          onSuccess: () => {
+            deleteScene.mutate({ chapterId: chapter.id, id: nextScene.id }, {
+              onSuccess: () => queryClient.invalidateQueries({ queryKey: getListScenesQueryKey(chapter.id) }),
+              onError: () => toast({ title: t('editor.mergeWithNext'), variant: "destructive" }),
+            });
+          },
+          onError: () => toast({ title: t('editor.mergeWithNext'), variant: "destructive" }),
+        }
+      );
+    } catch {
+      toast({ title: t('editor.mergeWithNext'), variant: "destructive" });
+    }
+  };
+
   return (
     <div>
       <div
@@ -182,7 +217,15 @@ function ChapterRow({
         <button className="shrink-0 text-muted-foreground">
           {expanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
         </button>
-        <span className="flex-1 truncate text-xs text-muted-foreground">{chapter.title}</span>
+        <span
+          className="flex-1 truncate text-xs text-muted-foreground hover:text-foreground transition-colors"
+          onClick={(e) => {
+            e.stopPropagation();
+            setExpanded(true);
+            onSelectChapter?.(chapter.id, book.title, chapter.title, book.id);
+          }}
+          title={chapter.title}
+        >{chapter.title}</span>
         <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5">
           <button
             className="w-4 h-4 flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30"
@@ -270,6 +313,18 @@ function ChapterRow({
                   <Button variant="ghost" size="icon" className="w-5 h-5" onClick={(e) => handleDuplicateScene(scene, e)} data-testid={`button-duplicate-scene-${scene.id}`}>
                     <Copy className="w-2.5 h-2.5" />
                   </Button>
+                  {canDown && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="w-5 h-5 text-muted-foreground"
+                      title={t('editor.mergeWithNext')}
+                      onClick={(e) => handleMergeWithNext(scene, sorted[idx + 1], e)}
+                      data-testid={`button-merge-scene-${scene.id}`}
+                    >
+                      <GitMerge className="w-2.5 h-2.5" />
+                    </Button>
+                  )}
                   <Button variant="ghost" size="icon" className="w-5 h-5" onClick={(e) => handleRenameScene(scene, e)} data-testid={`button-rename-scene-${scene.id}`}>
                     <Pencil className="w-2.5 h-2.5" />
                   </Button>
@@ -305,6 +360,7 @@ function BookRow({
   projectId,
   selectedSceneId,
   onSelectScene,
+  onSelectChapter,
   onRename,
   onDeleteBook,
   t,
@@ -315,6 +371,7 @@ function BookRow({
   projectId: number;
   selectedSceneId: number | null;
   onSelectScene: StructureTreeProps["onSelectScene"];
+  onSelectChapter?: StructureTreeProps["onSelectChapter"];
   onRename: (target: RenameTarget) => void;
   onDeleteBook: (bookId: number, e: React.MouseEvent) => void;
   t: (key: Parameters<ReturnType<typeof useI18n>["t"]>[0]) => string;
@@ -473,6 +530,7 @@ function BookRow({
               book={book}
               selectedSceneId={selectedSceneId}
               onSelectScene={onSelectScene}
+              onSelectChapter={onSelectChapter}
               onRename={onRename}
               onDeleteChapter={handleDeleteChapter}
               onMoveChapter={handleMoveChapter}
@@ -506,6 +564,7 @@ export function StructureTree({
   projectId,
   selectedSceneId,
   onSelectScene,
+  onSelectChapter,
 }: StructureTreeProps) {
   const { t } = useI18n();
   const { toast } = useToast();
@@ -611,6 +670,7 @@ export function StructureTree({
               projectId={projectId}
               selectedSceneId={selectedSceneId}
               onSelectScene={onSelectScene}
+              onSelectChapter={onSelectChapter}
               onRename={openRename}
               onDeleteBook={handleDeleteBook}
               t={t}

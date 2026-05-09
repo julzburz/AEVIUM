@@ -65,6 +65,22 @@ export default function Editor() {
     setWordCount(0);
   }, []);
 
+  const handleSelectChapter = useCallback((
+    chapterId: number,
+    bookTitle: string,
+    chapterTitle: string,
+    bookId: number,
+  ) => {
+    setSelectedChapterId(chapterId);
+    setSelectedChapterTitle(chapterTitle);
+    setSelectedBookTitle(bookTitle);
+    setSelectedBookId(bookId);
+    setSelectedSceneId(null);
+    setSelectedSceneTitle(null);
+    setChapterView(true);
+    setWordCount(0);
+  }, []);
+
   const handleWordCountChange = useCallback((count: number) => {
     setWordCount(count);
   }, []);
@@ -90,6 +106,7 @@ export default function Editor() {
   }
 
   const hasScene = !!(selectedSceneId && selectedChapterId);
+  const hasContent = hasScene || (chapterView && !!selectedChapterId);
 
   return (
     <div className="flex h-full overflow-hidden bg-background" data-testid="editor-layout">
@@ -142,6 +159,7 @@ export default function Editor() {
             projectId={id}
             selectedSceneId={selectedSceneId}
             onSelectScene={handleSelectScene}
+            onSelectChapter={handleSelectChapter}
           />
         </div>
       ) : (
@@ -212,7 +230,7 @@ export default function Editor() {
 
         {/* Content area */}
         <div className="flex-1 overflow-hidden flex flex-col relative">
-          {!hasScene && (
+          {!hasContent && (
             <div
               className="flex flex-col items-center justify-center h-full text-muted-foreground py-20 text-center px-8"
               data-testid="status-no-scene-selected"
@@ -221,7 +239,7 @@ export default function Editor() {
             </div>
           )}
 
-          {hasScene && chapterView && selectedChapterTitle && (
+          {hasContent && chapterView && selectedChapterTitle && (
             <ChapterView
               chapterId={selectedChapterId!}
               chapterTitle={selectedChapterTitle}
@@ -229,7 +247,7 @@ export default function Editor() {
             />
           )}
 
-          {hasScene && !chapterView && (
+          {hasContent && !chapterView && (
             <SceneEditor
               sceneId={selectedSceneId!}
               chapterId={selectedChapterId!}
