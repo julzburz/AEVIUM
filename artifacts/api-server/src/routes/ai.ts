@@ -17,6 +17,7 @@ import {
   buildCheckContradictionPrompt,
   buildFreeChatPrompt,
   buildFreeChatSystemPrompt,
+  buildImportStructurePrompt,
   type ChatHistoryEntry,
 } from "../lib/ai/prompts.js";
 import { buildQueryEmbedding } from "../lib/ai/embeddingService.js";
@@ -393,6 +394,39 @@ router.post("/ai/free-chat", requireAuth, async (req, res): Promise<void> => {
   const prompt = buildFreeChatPrompt(ctx, body.data.message, history);
   const text = await provider.generateText(prompt, systemPrompt);
   res.json({ text });
+});
+
+const ImportStructureBody = z.object({
+  projectId: z.coerce.number(),
+  text: z.string().min(1),
+  filename: z.string().default("documento"),
+});
+
+router.post("/ai/import-structure", requireAuth, async (req, res): Promise<void> => {
+  const userId = getUserId(req);
+  const body = ImportStructureBody.safeParse(req.body);
+  if (!body.success) { res.status(400).json({ error: body.error.message }); return; }
+
+  const project = await verifyProject(body.data.projectId, userId);
+  if (!project) { res.status(404).json({ error: "Project not found" }); return; }
+
+  const provider = await getProviderForProject(body.data.projectId, userId);
+  const prompt = buildImportStructurePrompt(body.data.text, body.data.filename);
+
+  const raw = await provider.generateText(prompt, "Eres un asistente de edición literaria. Devuelve únicamente JSON válido, sin markdown ni texto adicional.");
+
+  // Strip markdown fences if present
+  const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
+
+  let parsed: { chapterTitle: string; scenes: { title: string; content: string }[] };
+  try {
+    parsed = JSON.parse(cleaned);
+  } catch {
+    res.status(422).json({ error: "AI did not return valid JSON", raw });
+    return;
+  }
+
+  res.json(parsed);
 });
 
 router.post("/ai/test-builtin", requireAuth, async (_req, res): Promise<void> => {

@@ -146,6 +146,25 @@ export function buildStyleChatPrompt(messages: { role: string; content: string }
   return messages.map(m => `${m.role === "user" ? "Escritor" : "AEVIUM"}: ${m.content}`).join("\n\n");
 }
 
+export function buildImportStructurePrompt(text: string, filename: string): string {
+  // Trim to a safe token window (~20k chars ≈ ~5k tokens)
+  const safeText = text.slice(0, 20000);
+  return [
+    `--- ARCHIVO: ${filename} ---`,
+    safeText,
+    "",
+    "Eres un asistente de edición literaria. Analiza el texto anterior y devuelve EXCLUSIVAMENTE un JSON con la siguiente estructura:",
+    '{"chapterTitle":"...","scenes":[{"title":"...","content":"..."}]}',
+    "",
+    "Reglas:",
+    "1. chapterTitle: el título del capítulo. Usa el primer encabezado (H1) o la primera línea si parece un título. Si no hay título claro, genera uno descriptivo de 3-6 palabras basado en el contenido.",
+    "2. scenes: divide el texto en escenas narrativas según cambios de lugar, tiempo o punto de vista. Si el texto no tiene divisiones claras, devuelve una sola escena con todo el contenido.",
+    "3. Para cada escena: title = nombre descriptivo de 2-5 palabras; content = el texto íntegro de la escena tal como aparece, sin modificarlo.",
+    "4. No inventes ni modifiques el contenido narrativo. Solo organiza y nombra.",
+    "5. Devuelve SOLO el JSON, sin markdown ni explicación adicional.",
+  ].join("\n");
+}
+
 export function buildStyleAnalyzePrompt(text: string): string {
   return [
     "--- FRAGMENTO DEL TEXTO A ANALIZAR ---",

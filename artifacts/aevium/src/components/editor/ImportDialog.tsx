@@ -1,86 +1,32 @@
 import { useState, useRef } from "react";
 import mammoth from "mammoth";
 import { useI18n } from "@/lib/i18n";
-import { useCreateChapter, useCreateScene, useListBooks, getListChaptersQueryKey, getListScenesQueryKey, getListBooksQueryKey } from "@workspace/api-client-react";
+import {
+  useCreateChapter, useCreateScene, useListBooks,
+  getListChaptersQueryKey, getListScenesQueryKey, getListBooksQueryKey
+} from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog, DialogContent, DialogFooter, DialogHeader,
+  DialogTitle, DialogDescription
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { FileText, Upload } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { FileText, Upload, Loader2, CheckCircle2, XCircle, Sparkles } from "lucide-react";
 
 interface ParsedScene { title: string; content: string }
 interface ParsedChapter { title: string; scenes: ParsedScene[] }
 
-function parseFile(text: string): ParsedChapter[] {
-  const lines = text.split("\n");
-  const chapters: ParsedChapter[] = [];
-  let currentChapter: ParsedChapter | null = null;
-  let currentScene: ParsedScene | null = null;
-  let contentBuffer: string[] = [];
-
-  const flushScene = () => {
-    if (currentScene && currentChapter) {
-      currentScene.content = contentBuffer.join("\n").trim();
-      currentChapter.scenes.push(currentScene);
-      currentScene = null;
-      contentBuffer = [];
-    }
-  };
-  const flushChapter = () => {
-    flushScene();
-    if (currentChapter) chapters.push(currentChapter);
-    currentChapter = null;
-  };
-
-  for (const line of lines) {
-    const h1 = line.match(/^#\s+(.+)/);
-    const h2 = line.match(/^##\s+(.+)/);
-    const h3 = line.match(/^###\s+(.+)/);
-
-    if (h1) {
-      flushChapter();
-      currentChapter = { title: h1[1].trim(), scenes: [] };
-    } else if (h2) {
-      if (!currentChapter) currentChapter = { title: "Capítulo 1", scenes: [] };
-      flushScene();
-      currentScene = { title: h2[1].trim(), content: "" };
-    } else if (h3) {
-      if (!currentChapter) currentChapter = { title: "Capítulo 1", scenes: [] };
-      flushScene();
-      currentScene = { title: h3[1].trim(), content: "" };
-    } else {
-      if (currentScene) {
-        contentBuffer.push(line);
-      } else if (currentChapter) {
-        if (!currentScene && line.trim()) {
-          if (!currentScene) {
-            currentScene = { title: "Escena 1", content: "" };
-          }
-          contentBuffer.push(line);
-        }
-      }
-    }
-  }
-  flushChapter();
-
-  if (chapters.length === 0) {
-    const paragraphs = text.split(/\n{2,}/).filter(p => p.trim());
-    const newChapter: ParsedChapter = { title: "Capítulo importado", scenes: [] };
-    const chunkSize = 5;
-    for (let i = 0; i < paragraphs.length; i += chunkSize) {
-      const chunk = paragraphs.slice(i, i + chunkSize).join("\n\n");
-      newChapter.scenes.push({ title: `Escena ${Math.floor(i / chunkSize) + 1}`, content: chunk });
-    }
-    if (newChapter.scenes.length === 0 && text.trim()) {
-      newChapter.scenes.push({ title: "Escena 1", content: text.trim() });
-    }
-    chapters.push(newChapter);
-  }
-
-  return chapters.filter(c => c.scenes.length > 0);
+type FileStatus = "pending" | "extracting" | "analyzing" | "done" | "error";
+interface FileEntry {
+  file: File;
+  status: FileStatus;
+  chapter?: ParsedChapter;
+  error?: string;
 }
 
 interface ImportDialogProps {
@@ -90,14 +36,44 @@ interface ImportDialogProps {
   onClose: (rawText?: string) => void;
 }
 
+async function extractText(file: File): Promise<string> {
+  const ext = file.name.split(".").pop()?.toLowerCase();
+  if (ext === "docx") {
+    const buf = await file.arrayBuffer();
+    const result = await mammoth.extractRawText({ arrayBuffer: buf });
+    return result.value;
+  }
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => resolve((e.target?.result as string) ?? "");
+    reader.onerror = reject;
+    reader.readAsText(file, "utf-8");
+  });
+}
+
+async function analyzeWithAI(
+  text: string,
+  filename: string,
+  projectId: number
+): Promise<ParsedChapter> {
+  const res = await fetch("/api/ai/import-structure", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ projectId, text, filename }),
+  });
+  if (!res.ok) throw new Error(`AI error ${res.status}`);
+  const data = await res.json() as { chapterTitle: string; scenes: { title: string; content: string }[] };
+  return { title: data.chapterTitle, scenes: data.scenes };
+}
+
 export function ImportDialog({ projectId, bookId: initialBookId, open, onClose }: ImportDialogProps) {
   const { t } = useI18n();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
-  const [parsed, setParsed] = useState<ParsedChapter[]>([]);
-  const [rawText, setRawText] = useState("");
-  const [fileName, setFileName] = useState("");
+
+  const [entries, setEntries] = useState<FileEntry[]>([]);
+  const [processing, setProcessing] = useState(false);
   const [importing, setImporting] = useState(false);
   const [selectedBookId, setSelectedBookId] = useState<number | null>(initialBookId ?? null);
 
@@ -110,76 +86,105 @@ export function ImportDialog({ projectId, bookId: initialBookId, open, onClose }
 
   const effectiveBookId = selectedBookId ?? initialBookId ?? null;
 
-  const handleFile = async (file: File) => {
-    const ext = file.name.split(".").pop()?.toLowerCase();
-
-    if (ext === "doc") {
-      toast({ title: t('editor.import.docLegacy'), variant: "destructive" });
-      return;
-    }
-
-    setFileName(file.name);
-
-    if (ext === "docx") {
-      try {
-        const arrayBuffer = await file.arrayBuffer();
-        const result = await mammoth.extractRawText({ arrayBuffer });
-        const text = result.value;
-        setRawText(text);
-        setParsed(parseFile(text));
-      } catch {
-        toast({ title: t('editor.import.error'), variant: "destructive" });
-      }
-      return;
-    }
-
-    // .txt / .md — read as plain text
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const text = (e.target?.result as string) ?? "";
-      setRawText(text);
-      setParsed(parseFile(text));
-    };
-    reader.readAsText(file, "utf-8");
+  const handleReset = () => {
+    setEntries([]);
+    setProcessing(false);
+    setImporting(false);
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleClose = () => {
+    handleReset();
+    onClose();
+  };
+
+  const setEntryStatus = (idx: number, patch: Partial<FileEntry>) => {
+    setEntries((prev) => prev.map((e, i) => i === idx ? { ...e, ...patch } : e));
+  };
+
+  const processFiles = async (files: File[]) => {
+    const rejected = files.filter((f) => {
+      const ext = f.name.split(".").pop()?.toLowerCase();
+      return ext === "doc";
+    });
+    if (rejected.length > 0) {
+      toast({ title: t('editor.import.docLegacy'), variant: "destructive" });
+    }
+
+    const accepted = files.filter((f) => {
+      const ext = f.name.split(".").pop()?.toLowerCase();
+      return ["docx", "txt", "md", "markdown"].includes(ext ?? "");
+    });
+
+    if (accepted.length === 0) return;
+
+    const initial: FileEntry[] = accepted.map((f) => ({ file: f, status: "pending" }));
+    setEntries(initial);
+    setProcessing(true);
+
+    for (let i = 0; i < accepted.length; i++) {
+      const file = accepted[i];
+      try {
+        setEntryStatus(i, { status: "extracting" });
+        const text = await extractText(file);
+
+        setEntryStatus(i, { status: "analyzing" });
+        const chapter = await analyzeWithAI(text, file.name, projectId);
+
+        setEntryStatus(i, { status: "done", chapter });
+      } catch (err) {
+        setEntryStatus(i, { status: "error", error: String(err) });
+      }
+    }
+
+    setProcessing(false);
+  };
+
+  const handleFilePick = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    await processFiles(Array.from(files));
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
-    const file = e.dataTransfer.files[0];
-    if (file) handleFile(file);
+    await processFiles(Array.from(e.dataTransfer.files));
   };
 
   const handleImport = async () => {
-    if (parsed.length === 0 || !effectiveBookId) return;
+    if (!effectiveBookId) return;
+    const ready = entries.filter((e) => e.status === "done" && e.chapter);
+    if (ready.length === 0) return;
+
     setImporting(true);
     try {
-      for (const chapter of parsed) {
+      for (const entry of ready) {
+        const ch = entry.chapter!;
         const newChapter = await new Promise<{ id: number }>((resolve, reject) => {
-          createChapter.mutate({ bookId: effectiveBookId, data: { title: chapter.title } }, {
-            onSuccess: resolve,
-            onError: reject,
-          });
+          createChapter.mutate(
+            { bookId: effectiveBookId, data: { title: ch.title } },
+            { onSuccess: resolve, onError: reject }
+          );
         });
         await queryClient.invalidateQueries({ queryKey: getListChaptersQueryKey(effectiveBookId) });
 
-        for (const scene of chapter.scenes) {
+        for (const scene of ch.scenes) {
           await new Promise<void>((resolve, reject) => {
-            createScene.mutate({ chapterId: newChapter.id, data: { title: scene.title, content: scene.content } }, {
-              onSuccess: () => {
-                queryClient.invalidateQueries({ queryKey: getListScenesQueryKey(newChapter.id) });
-                resolve();
-              },
-              onError: reject,
-            });
+            createScene.mutate(
+              { chapterId: newChapter.id, data: { title: scene.title, content: scene.content } },
+              {
+                onSuccess: () => {
+                  queryClient.invalidateQueries({ queryKey: getListScenesQueryKey(newChapter.id) });
+                  resolve();
+                },
+                onError: reject,
+              }
+            );
           });
         }
       }
+
       toast({ title: t('editor.import.success') });
-      const textToAnalyze = rawText;
-      setParsed([]);
-      setFileName("");
-      setRawText("");
-      onClose(textToAnalyze);
+      handleReset();
+      onClose();
     } catch {
       toast({ title: t('editor.import.error'), variant: "destructive" });
     } finally {
@@ -187,17 +192,41 @@ export function ImportDialog({ projectId, bookId: initialBookId, open, onClose }
     }
   };
 
-  const totalScenes = parsed.reduce((a, c) => a + c.scenes.length, 0);
+  const doneCount = entries.filter((e) => e.status === "done").length;
+  const totalScenes = entries
+    .filter((e) => e.status === "done")
+    .reduce((a, e) => a + (e.chapter?.scenes.length ?? 0), 0);
+  const allDone = entries.length > 0 && !processing;
+  const progressPct = entries.length > 0
+    ? Math.round((entries.filter((e) => e.status === "done" || e.status === "error").length / entries.length) * 100)
+    : 0;
+
+  const statusIcon = (status: FileStatus) => {
+    if (status === "done") return <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />;
+    if (status === "error") return <XCircle className="w-4 h-4 text-destructive shrink-0" />;
+    return <Loader2 className="w-4 h-4 text-primary animate-spin shrink-0" />;
+  };
+
+  const statusLabel = (e: FileEntry) => {
+    if (e.status === "extracting") return t('editor.import.aiExtracting');
+    if (e.status === "analyzing") return t('editor.import.aiAnalyzing');
+    if (e.status === "done") return `${e.chapter?.scenes.length ?? 0} ${t('editor.import.scenes')}`;
+    if (e.status === "error") return t('editor.import.error');
+    return "";
+  };
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) { setParsed([]); setFileName(""); setRawText(""); onClose(); } }}>
-      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
+    <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose(); }}>
+      <DialogContent className="max-w-2xl max-h-[88vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>{t('editor.import.title')}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-primary" />
+            {t('editor.import.title')}
+          </DialogTitle>
           <DialogDescription>{t('editor.import.desc')}</DialogDescription>
         </DialogHeader>
 
-        {/* Book selector — shown when no book is pre-selected */}
+        {/* Book selector */}
         {books.length > 0 && (
           <div className="space-y-1">
             <Label className="text-xs">{t('editor.import.targetBook')}</Label>
@@ -217,63 +246,118 @@ export function ImportDialog({ projectId, bookId: initialBookId, open, onClose }
           </div>
         )}
 
-        <div
-          className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
-          onClick={() => fileRef.current?.click()}
-          onDrop={handleDrop}
-          onDragOver={(e) => e.preventDefault()}
-          data-testid="dropzone-import"
-        >
-          <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-          <p className="text-sm text-muted-foreground">{fileName || t('editor.import.dropOrClick')}</p>
-          <p className="text-xs text-muted-foreground/60 mt-1">{t('editor.import.supported')}</p>
-          <input
-            ref={fileRef}
-            type="file"
-            className="hidden"
-            accept=".docx,.doc,.txt,.md,.markdown"
-            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
-            data-testid="input-import-file"
-          />
-        </div>
+        {/* Drop zone — only shown before files are loaded */}
+        {entries.length === 0 && (
+          <div
+            className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
+            onClick={() => fileRef.current?.click()}
+            onDrop={handleDrop}
+            onDragOver={(e) => e.preventDefault()}
+            data-testid="dropzone-import"
+          >
+            <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
+            <p className="text-sm font-medium mb-1">{t('editor.import.dropOrClick')}</p>
+            <p className="text-xs text-muted-foreground">{t('editor.import.multipleHint')}</p>
+            <p className="text-xs text-muted-foreground/60 mt-2">{t('editor.import.supported')}</p>
+            <input
+              ref={fileRef}
+              type="file"
+              className="hidden"
+              accept=".docx,.doc,.txt,.md,.markdown"
+              multiple
+              onChange={(e) => handleFilePick(e.target.files)}
+              data-testid="input-import-file"
+            />
+          </div>
+        )}
 
-        {parsed.length > 0 && (
-          <div className="flex-1 min-h-0 flex flex-col">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-2">
-              {t('editor.import.preview')} — {parsed.length} capítulos · {totalScenes} escenas
-            </p>
+        {/* File processing list */}
+        {entries.length > 0 && (
+          <div className="flex-1 min-h-0 flex flex-col gap-3">
+            {processing && (
+              <div className="space-y-1">
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1.5">
+                    <Sparkles className="w-3 h-3 text-primary" />
+                    {t('editor.import.aiProcessing')}
+                  </span>
+                  <span>{progressPct}%</span>
+                </div>
+                <Progress value={progressPct} className="h-1.5" />
+              </div>
+            )}
+
+            {allDone && (
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">
+                {t('editor.import.preview')} — {doneCount} {t('editor.import.chaptersLabel')} · {totalScenes} {t('editor.import.scenes')}
+              </p>
+            )}
+
             <ScrollArea className="flex-1 min-h-0">
-              <div className="space-y-3">
-                {parsed.map((ch, ci) => (
-                  <div key={ci} className="border rounded-lg p-3" data-testid={`preview-chapter-${ci}`}>
-                    <div className="flex items-center gap-2 mb-2">
-                      <FileText className="w-3.5 h-3.5 text-primary" />
-                      <span className="text-sm font-medium">{ch.title}</span>
-                      <span className="text-xs text-muted-foreground">({ch.scenes.length} escenas)</span>
+              <div className="space-y-2 pr-1">
+                {entries.map((entry, i) => (
+                  <div key={i} className="border rounded-lg overflow-hidden" data-testid={`file-entry-${i}`}>
+                    {/* File header */}
+                    <div className="flex items-center gap-2 px-3 py-2 bg-muted/30">
+                      {entry.status === "pending"
+                        ? <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
+                        : statusIcon(entry.status)
+                      }
+                      <span className="text-sm font-medium flex-1 truncate">
+                        {entry.chapter?.title ?? entry.file.name}
+                      </span>
+                      <span className="text-xs text-muted-foreground shrink-0">
+                        {statusLabel(entry)}
+                      </span>
                     </div>
-                    <div className="ml-5 space-y-1">
-                      {ch.scenes.map((sc, si) => (
-                        <div key={si} className="flex items-center gap-2 text-xs text-muted-foreground" data-testid={`preview-scene-${ci}-${si}`}>
-                          <span className="w-1 h-1 rounded-full bg-muted-foreground/40 shrink-0" />
-                          <span className="truncate">{sc.title}</span>
-                          <span className="shrink-0 text-muted-foreground/50">
-                            {sc.content.trim().split(/\s+/).filter(Boolean).length}p
-                          </span>
-                        </div>
-                      ))}
-                    </div>
+
+                    {/* Scenes preview */}
+                    {entry.status === "done" && entry.chapter && (
+                      <div className="px-3 py-2 space-y-1">
+                        {entry.chapter.scenes.map((sc, si) => (
+                          <div key={si} className="flex items-center gap-2 text-xs text-muted-foreground" data-testid={`preview-scene-${i}-${si}`}>
+                            <span className="w-1 h-1 rounded-full bg-muted-foreground/40 shrink-0" />
+                            <span className="flex-1 truncate">{sc.title}</span>
+                            <span className="shrink-0 text-muted-foreground/50">
+                              {sc.content.trim().split(/\s+/).filter(Boolean).length}p
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
             </ScrollArea>
+
+            {/* Re-select button */}
+            {allDone && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="self-start text-xs h-7"
+                onClick={() => { handleReset(); setTimeout(() => fileRef.current?.click(), 50); }}
+              >
+                <Upload className="w-3 h-3 mr-1.5" /> {t('editor.import.addMore')}
+              </Button>
+            )}
           </div>
         )}
 
+        <input
+          ref={fileRef}
+          type="file"
+          className="hidden"
+          accept=".docx,.doc,.txt,.md,.markdown"
+          multiple
+          onChange={(e) => handleFilePick(e.target.files)}
+        />
+
         <DialogFooter>
-          <Button variant="outline" onClick={() => { setParsed([]); setFileName(""); setRawText(""); onClose(); }}>{t('form.cancel')}</Button>
+          <Button variant="outline" onClick={handleClose}>{t('form.cancel')}</Button>
           <Button
             onClick={handleImport}
-            disabled={parsed.length === 0 || importing || !effectiveBookId}
+            disabled={!allDone || importing || !effectiveBookId || doneCount === 0}
             data-testid="button-confirm-import"
           >
             {importing ? t('editor.import.importing') : t('editor.import.confirm')}
