@@ -328,19 +328,37 @@ export function AiPanel({ projectId, sceneId, chapterId, onInsertText, onReplace
     <div className="flex flex-col h-full gap-2">
       {/* Contradiction warning dialog */}
       <Dialog open={!!contradictionAlert} onOpenChange={(o) => { if (!o) { setContradictionAlert(null); setPendingAction(null); } }}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
               <AlertTriangle className="w-4 h-4" />
               {t("ai.contradictionTitle")}
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-2 text-sm">
+          <div className="space-y-3 text-sm">
             <p className="text-muted-foreground">{t("ai.contradictionDesc")}</p>
             {contradictionAlert?.contradictions.map((c, i) => (
-              <div key={i} className="bg-amber-500/10 border border-amber-500/20 rounded p-2 text-xs space-y-1">
+              <div key={i} className="bg-amber-500/10 border border-amber-500/20 rounded p-2 text-xs space-y-2">
                 <p className="font-medium text-foreground">{c.description}</p>
                 <p className="text-muted-foreground">{t("ai.conflictsWith")}: {c.conflictingMemory}</p>
+                {c.options && c.options.length > 0 && (
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-medium text-foreground/60 uppercase tracking-wide">{t("ai.suggestedOptions")}</p>
+                    {c.options.map((opt, j) => (
+                      <button
+                        key={j}
+                        className="w-full text-left text-[11px] rounded border border-primary/30 bg-primary/5 hover:bg-primary/10 px-2 py-1.5 transition-colors text-foreground leading-snug"
+                        onClick={() => {
+                          setInstruction(opt);
+                          setContradictionAlert(null);
+                          setPendingAction(null);
+                        }}
+                      >
+                        → {opt}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -348,7 +366,7 @@ export function AiPanel({ projectId, sceneId, chapterId, onInsertText, onReplace
             <Button variant="outline" size="sm" onClick={() => { setContradictionAlert(null); setPendingAction(null); }}>
               {t("form.cancel")}
             </Button>
-            <Button size="sm" onClick={handleContradictionProceed}>
+            <Button size="sm" variant="secondary" onClick={handleContradictionProceed}>
               {t("ai.proceedAnyway")}
             </Button>
           </DialogFooter>

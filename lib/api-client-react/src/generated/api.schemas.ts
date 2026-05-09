@@ -1057,6 +1057,32 @@ export interface AiCheckContradictionBody {
   instruction: string;
 }
 
+export interface AiContextSummaryBody {
+  projectId: number;
+  /** @nullable */
+  sceneId?: number | null;
+  /** @nullable */
+  chapterId?: number | null;
+}
+
+export interface AiContextSummaryResult {
+  characterCount: number;
+  memoryCount: number;
+  hasPreviousScene: boolean;
+  hasStyleGuide: boolean;
+  /** @nullable */
+  projectName?: string | null;
+  /** @nullable */
+  chapterTitle?: string | null;
+  /** @nullable */
+  sceneTitle?: string | null;
+}
+
+export interface AiTestResult {
+  ok: boolean;
+  message: string;
+}
+
 export interface AiFreeChatBody {
   /** @nullable */
   sceneId?: number | null;

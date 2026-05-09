@@ -4,7 +4,7 @@ import { db } from "@workspace/db";
 import { projectsTable, memoryItemsTable, continuityAlertsTable, sceneVersionsTable, scenesTable, aiCredentialsTable, chaptersTable } from "@workspace/db";
 import { requireAuth, getUserId } from "../lib/auth.js";
 import { geminiProvider, createCustomGeminiProvider } from "../lib/ai/geminiProvider.js";
-import { assembleContext, buildSystemPrompt, verifySceneOwnership, verifyChapterOwnership } from "../lib/ai/contextAssembler.js";
+import { assembleContext, buildSystemPrompt, verifySceneOwnership, verifyChapterOwnership, verifySceneInProject } from "../lib/ai/contextAssembler.js";
 import { decrypt } from "../lib/encryption.js";
 import type { NarrativeContext } from "../lib/ai/types.js";
 import {
@@ -266,12 +266,8 @@ router.post("/ai/extract-memory", requireAuth, async (req, res): Promise<void> =
   if (!project) { res.status(404).json({ error: "Project not found" }); return; }
 
   if (body.data.sceneId) {
-    const sceneRow = await db
-      .select({ id: scenesTable.id })
-      .from(scenesTable)
-      .where(eq(scenesTable.id, body.data.sceneId))
-      .limit(1);
-    if (!sceneRow[0]) { res.status(403).json({ error: "Scene not found" }); return; }
+    const ownershipOk = await verifySceneInProject(body.data.sceneId, body.data.projectId);
+    if (!ownershipOk) { res.status(403).json({ error: "Scene not found or does not belong to this project" }); return; }
   }
 
   const provider = await getProviderForProject(body.data.projectId, userId);

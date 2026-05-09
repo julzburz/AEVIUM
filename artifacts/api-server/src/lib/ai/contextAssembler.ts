@@ -13,6 +13,24 @@ import { eq, and, asc } from "drizzle-orm";
 import type { NarrativeContext } from "./types.js";
 
 /**
+ * Verifies that sceneId belongs to projectId via the scene→chapter→book chain,
+ * without requiring chapterId. Use for endpoints that only receive sceneId + projectId.
+ */
+export async function verifySceneInProject(
+  sceneId: number,
+  projectId: number
+): Promise<boolean> {
+  const [row] = await db
+    .select({ sceneId: scenesTable.id })
+    .from(scenesTable)
+    .innerJoin(chaptersTable, eq(scenesTable.chapterId, chaptersTable.id))
+    .innerJoin(booksTable, eq(chaptersTable.bookId, booksTable.id))
+    .where(and(eq(scenesTable.id, sceneId), eq(booksTable.projectId, projectId)))
+    .limit(1);
+  return !!row;
+}
+
+/**
  * Verifies that the given sceneId belongs to chapterId AND chapterId belongs to projectId
  * via the book chain. Returns true if ownership is valid.
  */

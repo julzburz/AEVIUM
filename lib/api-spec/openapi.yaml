@@ -1216,6 +1216,38 @@ paths:
               schema:
                 $ref: "#/components/schemas/AiContradictionResult"
 
+  /ai/context-summary:
+    post:
+      operationId: aiContextSummary
+      tags: [ai]
+      summary: Get a summary of the AI context for the current scene
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AiContextSummaryBody"
+      responses:
+        "200":
+          description: Context summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiContextSummaryResult"
+
+  /ai/test-builtin:
+    post:
+      operationId: aiTestBuiltin
+      tags: [ai]
+      summary: Test the built-in Replit-managed Gemini connection
+      responses:
+        "200":
+          description: Test result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiTestResult"
+
   /ai/free-chat:
     post:
       operationId: aiFreechat
@@ -2332,6 +2364,45 @@ components:
         instruction:
           type: string
       required: [projectId, instruction]
+
+    AiContextSummaryBody:
+      type: object
+      properties:
+        projectId:
+          type: integer
+        sceneId:
+          type: ["integer", "null"]
+        chapterId:
+          type: ["integer", "null"]
+      required: [projectId]
+
+    AiContextSummaryResult:
+      type: object
+      properties:
+        characterCount:
+          type: integer
+        memoryCount:
+          type: integer
+        hasPreviousScene:
+          type: boolean
+        hasStyleGuide:
+          type: boolean
+        projectName:
+          type: ["string", "null"]
+        chapterTitle:
+          type: ["string", "null"]
+        sceneTitle:
+          type: ["string", "null"]
+      required: [characterCount, memoryCount, hasPreviousScene, hasStyleGuide]
+
+    AiTestResult:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        message:
+          type: string
+      required: [ok, message]
 
     AiFreeChatBody:
       type: object

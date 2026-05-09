@@ -295,6 +295,7 @@
   "ai.contradictionDesc": "Tu instrucción puede contradecir elementos de la memoria canónica. ¿Quieres continuar de todas formas?",
   "ai.conflictsWith": "Conflicto con",
   "ai.proceedAnyway": "Continuar de todas formas",
+  "ai.suggestedOptions": "Sugerencias para resolverlo",
   "ai.memoryTitle": "Título",
   "ai.edit": "Editar",
   "settings.ai.credentials": "Claves API del proyecto",

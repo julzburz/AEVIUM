@@ -1237,6 +1237,33 @@ export const AiCheckContradictionResponse = zod.object({
 });
 
 /**
+ * @summary Get a summary of the AI context for the current scene
+ */
+export const AiContextSummaryBody = zod.object({
+  projectId: zod.number(),
+  sceneId: zod.number().nullish(),
+  chapterId: zod.number().nullish(),
+});
+
+export const AiContextSummaryResponse = zod.object({
+  characterCount: zod.number(),
+  memoryCount: zod.number(),
+  hasPreviousScene: zod.boolean(),
+  hasStyleGuide: zod.boolean(),
+  projectName: zod.string().nullish(),
+  chapterTitle: zod.string().nullish(),
+  sceneTitle: zod.string().nullish(),
+});
+
+/**
+ * @summary Test the built-in Replit-managed Gemini connection
+ */
+export const AiTestBuiltinResponse = zod.object({
+  ok: zod.boolean(),
+  message: zod.string(),
+});
+
+/**
  * @summary Free narrative chat with AEVIUM
  */
 export const AiFreechatBody = zod.object({

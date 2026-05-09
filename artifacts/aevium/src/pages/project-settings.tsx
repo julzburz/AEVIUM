@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useState, useEffect } from "react";
 import { ArrowLeft } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { AiSettingsSection } from "@/components/settings/AiSettingsSection";
 
 type ProjectType = "novel" | "saga" | "articles" | "screenplay" | "other";
 type ProjectLanguage = "en" | "es";
@@ -145,6 +146,8 @@ export default function ProjectSettings() {
           </Button>
         </div>
       </div>
+
+      <AiSettingsSection projectId={id} />
     </div>
   );
 }

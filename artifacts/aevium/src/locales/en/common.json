@@ -295,6 +295,7 @@
   "ai.contradictionDesc": "Your instruction may contradict elements in canonical memory. Do you want to continue anyway?",
   "ai.conflictsWith": "Conflicts with",
   "ai.proceedAnyway": "Continue anyway",
+  "ai.suggestedOptions": "Suggestions to resolve it",
   "ai.memoryTitle": "Title",
   "ai.edit": "Edit",
   "settings.ai.credentials": "Project API Keys",

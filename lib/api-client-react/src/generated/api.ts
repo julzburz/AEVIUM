@@ -19,6 +19,8 @@ import type {
 import type {
   AiCheckContradictionBody,
   AiCoherenceResult,
+  AiContextSummaryBody,
+  AiContextSummaryResult,
   AiContinueSceneBody,
   AiContradictionResult,
   AiCredential,
@@ -29,6 +31,7 @@ import type {
   AiGenerationResult,
   AiReviewCoherenceBody,
   AiRewriteSelectionBody,
+  AiTestResult,
   Book,
   Chapter,
   Character,
@@ -4725,6 +4728,173 @@ export const useAiCheckContradiction = <
   TContext
 > => {
   return useMutation(getAiCheckContradictionMutationOptions(options));
+};
+
+/**
+ * @summary Get a summary of the AI context for the current scene
+ */
+export const getAiContextSummaryUrl = () => {
+  return `/api/ai/context-summary`;
+};
+
+export const aiContextSummary = async (
+  aiContextSummaryBody: AiContextSummaryBody,
+  options?: RequestInit,
+): Promise<AiContextSummaryResult> => {
+  return customFetch<AiContextSummaryResult>(getAiContextSummaryUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(aiContextSummaryBody),
+  });
+};
+
+export const getAiContextSummaryMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof aiContextSummary>>,
+    TError,
+    { data: BodyType<AiContextSummaryBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof aiContextSummary>>,
+  TError,
+  { data: BodyType<AiContextSummaryBody> },
+  TContext
+> => {
+  const mutationKey = ["aiContextSummary"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof aiContextSummary>>,
+    { data: BodyType<AiContextSummaryBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return aiContextSummary(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AiContextSummaryMutationResult = NonNullable<
+  Awaited<ReturnType<typeof aiContextSummary>>
+>;
+export type AiContextSummaryMutationBody = BodyType<AiContextSummaryBody>;
+export type AiContextSummaryMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Get a summary of the AI context for the current scene
+ */
+export const useAiContextSummary = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof aiContextSummary>>,
+    TError,
+    { data: BodyType<AiContextSummaryBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof aiContextSummary>>,
+  TError,
+  { data: BodyType<AiContextSummaryBody> },
+  TContext
+> => {
+  return useMutation(getAiContextSummaryMutationOptions(options));
+};
+
+/**
+ * @summary Test the built-in Replit-managed Gemini connection
+ */
+export const getAiTestBuiltinUrl = () => {
+  return `/api/ai/test-builtin`;
+};
+
+export const aiTestBuiltin = async (
+  options?: RequestInit,
+): Promise<AiTestResult> => {
+  return customFetch<AiTestResult>(getAiTestBuiltinUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getAiTestBuiltinMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof aiTestBuiltin>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof aiTestBuiltin>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ["aiTestBuiltin"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof aiTestBuiltin>>,
+    void
+  > = () => {
+    return aiTestBuiltin(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AiTestBuiltinMutationResult = NonNullable<
+  Awaited<ReturnType<typeof aiTestBuiltin>>
+>;
+
+export type AiTestBuiltinMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Test the built-in Replit-managed Gemini connection
+ */
+export const useAiTestBuiltin = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof aiTestBuiltin>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof aiTestBuiltin>>,
+  TError,
+  void,
+  TContext
+> => {
+  return useMutation(getAiTestBuiltinMutationOptions(options));
 };
 
 /**
