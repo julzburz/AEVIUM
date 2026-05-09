@@ -214,11 +214,11 @@ function ChapterRow({
         onClick={() => setExpanded((v) => !v)}
         data-testid={`tree-chapter-${chapter.id}`}
       >
-        <button className="shrink-0 text-muted-foreground">
+        <button className="shrink-0 text-muted-foreground group-hover:text-secondary">
           {expanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
         </button>
         <span
-          className="flex-1 truncate text-xs text-muted-foreground hover:text-foreground transition-colors"
+          className="flex-1 truncate text-xs text-muted-foreground group-hover:text-secondary transition-colors"
           onClick={(e) => {
             e.stopPropagation();
             setExpanded(true);
