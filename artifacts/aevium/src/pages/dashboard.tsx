@@ -139,6 +139,7 @@ export default function Dashboard() {
   }
 
   return (
+    <div className="flex-1 min-h-0 overflow-y-auto">
     <div className="w-full max-w-6xl mx-auto px-6 py-8">
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
@@ -386,6 +387,7 @@ export default function Dashboard() {
           ))}
         </div>
       )}
+    </div>
     </div>
   );
 }

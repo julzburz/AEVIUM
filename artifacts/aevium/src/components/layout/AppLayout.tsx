@@ -6,7 +6,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
   return (
-    <div className="min-h-[100dvh] flex flex-col bg-background text-foreground">
+    <div className="h-[100dvh] flex flex-col bg-background text-foreground overflow-hidden">
       <header className="h-14 border-b border-border flex items-center justify-between px-4 shrink-0">
         <div className="flex items-center gap-4">
           <Link href="/dashboard" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
@@ -21,7 +21,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           <UserMenu />
         </div>
       </header>
-      <main className="flex-1 flex flex-col overflow-y-auto relative">
+      <main className="flex-1 min-h-0 flex flex-col overflow-hidden relative">
         {children}
       </main>
     </div>
