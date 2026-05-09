@@ -54,8 +54,13 @@ export function WorldRuleImportDialog({ projectId, open, onClose }: WorldRuleImp
   const [rules, setRules] = useState<ParsedRule[]>([]);
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragCounter = useRef(0);
 
-  const reset = () => { setStatus("idle"); setRules([]); setImporting(false); setError(null); };
+  const handleDragEnter = (e: React.DragEvent) => { e.preventDefault(); dragCounter.current++; if (dragCounter.current === 1) setIsDragging(true); };
+  const handleDragLeave = (e: React.DragEvent) => { e.preventDefault(); dragCounter.current--; if (dragCounter.current === 0) setIsDragging(false); };
+
+  const reset = () => { setStatus("idle"); setRules([]); setImporting(false); setError(null); setIsDragging(false); dragCounter.current = 0; };
   const handleClose = () => { reset(); onClose(); };
 
   const processFile = async (file: File) => {
@@ -128,12 +133,14 @@ export function WorldRuleImportDialog({ projectId, open, onClose }: WorldRuleImp
 
         {status === "idle" && (
           <div
-            className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
+            className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all duration-150 ${isDragging ? "border-primary bg-primary/8 scale-[1.02] shadow-[0_0_0_3px_hsl(var(--primary)/0.15)]" : "border-border hover:border-primary/50"}`}
             onClick={() => fileRef.current?.click()}
-            onDrop={(e) => { e.preventDefault(); handleFilePick(e.dataTransfer.files); }}
+            onDrop={(e) => { e.preventDefault(); setIsDragging(false); dragCounter.current = 0; handleFilePick(e.dataTransfer.files); }}
             onDragOver={(e) => e.preventDefault()}
+            onDragEnter={handleDragEnter}
+            onDragLeave={handleDragLeave}
           >
-            <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
+            <Upload className={`w-8 h-8 mx-auto mb-3 transition-colors ${isDragging ? "text-primary" : "text-muted-foreground"}`} />
             <p className="text-sm font-medium mb-1">{t('editor.import.dropOrClick')}</p>
             <p className="text-xs text-muted-foreground/60 mt-2">{t('editor.import.supported')}</p>
           </div>

@@ -499,16 +499,49 @@ router.post("/ai/import-characters", requireAuth, async (req, res): Promise<void
   res.json({ characters });
 });
 
+function repairTruncatedJson(s: string): string {
+  let inString = false, escaped = false;
+  const stack: string[] = [];
+  let i = 0;
+  for (; i < s.length; i++) {
+    const c = s[i];
+    if (escaped) { escaped = false; continue; }
+    if (c === "\\" && inString) { escaped = true; continue; }
+    if (c === '"') { inString = !inString; continue; }
+    if (inString) continue;
+    if (c === "{" || c === "[") stack.push(c);
+    else if (c === "}" || c === "]") stack.pop();
+  }
+  let result = s.trimEnd();
+  if (inString) {
+    const lastQuote = result.lastIndexOf('"');
+    result = result.slice(0, lastQuote).replace(/[,:]?\s*$/, "");
+  }
+  // Remove trailing incomplete key-value pair (e.g. ,"key": )
+  result = result.replace(/,\s*"[^"]*"\s*:\s*$/, "");
+  result = result.replace(/,\s*$/, "");
+  for (let j = stack.length - 1; j >= 0; j--) {
+    result += stack[j] === "{" ? "}" : "]";
+  }
+  return result;
+}
+
 function extractJson<T>(raw: string): T | null {
   const strip = raw
     .replace(/^```(?:json)?\s*/im, "")
     .replace(/```\s*$/m, "")
     .trim();
+  // 1. Try as-is
   try { return JSON.parse(strip) as T; } catch { /* try harder */ }
+  // 2. Extract from first { to last }
   const first = strip.indexOf("{");
   const last  = strip.lastIndexOf("}");
   if (first !== -1 && last > first) {
     try { return JSON.parse(strip.slice(first, last + 1)) as T; } catch { /* fall through */ }
+  }
+  // 3. Try to repair truncated JSON
+  if (first !== -1) {
+    try { return JSON.parse(repairTruncatedJson(strip.slice(first))) as T; } catch { /* fall through */ }
   }
   return null;
 }

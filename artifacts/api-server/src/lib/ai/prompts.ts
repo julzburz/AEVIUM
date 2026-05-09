@@ -165,7 +165,7 @@ export function buildImportStructurePrompt(text: string, filename: string): stri
 }
 
 export function buildImportCharactersPrompt(text: string): string {
-  const preview = text.slice(0, 12000);
+  const preview = text.slice(0, 5000);
   return [
     "--- TEXTO CON DESCRIPCIONES DE PERSONAJES ---",
     preview,
@@ -183,7 +183,7 @@ export function buildImportCharactersPrompt(text: string): string {
 }
 
 export function buildImportLocationsPrompt(text: string): string {
-  const preview = text.slice(0, 12000);
+  const preview = text.slice(0, 5000);
   return [
     "--- TEXTO CON DESCRIPCIONES DE LUGARES ---",
     preview,
@@ -201,7 +201,7 @@ export function buildImportLocationsPrompt(text: string): string {
 }
 
 export function buildImportWorldRulesPrompt(text: string): string {
-  const preview = text.slice(0, 12000);
+  const preview = text.slice(0, 5000);
   return [
     "--- TEXTO CON REGLAS DEL MUNDO ---",
     preview,
