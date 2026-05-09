@@ -103,6 +103,7 @@
   "ai.rewriteSelection": "Reescribir selección",
   "ai.reviewCoherence": "Revisar coherencia",
   "ai.extractFacts": "Extraer hechos de la escena",
+  "ai.factsDialogHint": "Revisa los hechos detectados y guarda los que sean relevantes para tu historia.",
   "ai.saveAll": "Guardar todos",
   "ai.noFactsFound": "No se encontraron hechos relevantes en esta escena.",
   "ai.allFactsSaved": "hechos guardados en memoria",

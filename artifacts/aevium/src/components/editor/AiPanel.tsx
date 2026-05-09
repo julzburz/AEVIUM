@@ -93,6 +93,7 @@ export function AiPanel({ projectId, sceneId, chapterId, onInsertText, onReplace
   const [chatMessage, setChatMessage] = useState("");
   const [chatHistory, setChatHistory] = useState<Array<{ role: "user" | "ai"; text: string }>>([]);
   const [showMemSuggestions, setShowMemSuggestions] = useState(false);
+  const [showFactsDialog, setShowFactsDialog] = useState(false);
   const [contradictionAlert, setContradictionAlert] = useState<ContradictionResult | null>(null);
   const [pendingAction, setPendingAction] = useState<"continue" | "rewrite" | null>(null);
   const [contextSummary, setContextSummary] = useState<ContextSummary | null>(null);
@@ -287,6 +288,7 @@ export function AiPanel({ projectId, sceneId, chapterId, onInsertText, onReplace
       if (resp.suggestions?.length > 0) {
         setMemorySuggestions(resp.suggestions);
         setShowMemSuggestions(true);
+        setShowFactsDialog(true);
       } else {
         toast({ title: t("ai.noFactsFound") });
       }
@@ -324,6 +326,7 @@ export function AiPanel({ projectId, sceneId, chapterId, onInsertText, onReplace
     }
     setMemorySuggestions([]);
     setShowMemSuggestions(false);
+    setShowFactsDialog(false);
     qc.invalidateQueries({ queryKey: ["listMemoryItems"] });
     toast({ title: `${saved} ${t("ai.allFactsSaved")}` });
   }
@@ -605,80 +608,16 @@ export function AiPanel({ projectId, sceneId, chapterId, onInsertText, onReplace
                 </div>
               )}
 
-              {/* Memory suggestions */}
-              {memorySuggestions.length > 0 && (
-                <Collapsible open={showMemSuggestions} onOpenChange={setShowMemSuggestions}>
-                  <CollapsibleTrigger asChild>
-                    <button className="flex items-center gap-1.5 text-xs text-primary font-medium w-full">
-                      <BookMarked className="w-3 h-3" />
-                      {t("ai.memorySuggestions")} ({memorySuggestions.length})
-                      {showMemSuggestions ? <ChevronUp className="w-3 h-3 ml-auto" /> : <ChevronDown className="w-3 h-3 ml-auto" />}
-                    </button>
-                  </CollapsibleTrigger>
-                  {showMemSuggestions && (
-                    <div className="mt-1.5">
-                      <Button
-                        size="sm"
-                        className="w-full h-6 text-[10px] bg-secondary text-secondary-foreground hover:bg-secondary/90"
-                        onClick={handleSaveAllFacts}
-                      >
-                        <CheckCircle2 className="w-2.5 h-2.5 mr-1" />{t("ai.saveAll")} ({memorySuggestions.length})
-                      </Button>
-                    </div>
-                  )}
-                  <CollapsibleContent>
-                    <div className="flex flex-col gap-2 mt-2">
-                      {memorySuggestions.map((s, i) => (
-                        <div key={i} className="border rounded-md p-2 flex flex-col gap-1">
-                          {editingMemory?.index === i ? (
-                            <div className="flex flex-col gap-1.5">
-                              <Input
-                                value={editingMemory.title}
-                                onChange={(e) => setEditingMemory({ ...editingMemory, title: e.target.value })}
-                                className="h-6 text-[11px] px-1.5"
-                                placeholder={t("ai.memoryTitle")}
-                              />
-                              <Textarea
-                                value={editingMemory.content}
-                                onChange={(e) => setEditingMemory({ ...editingMemory, content: e.target.value })}
-                                className="text-[10px] min-h-[48px] resize-none"
-                                rows={2}
-                              />
-                              <div className="flex gap-1">
-                                <Button size="sm" className="flex-1 h-5 text-[9px] px-1.5" onClick={() => handleSaveMemory(i, editingMemory.title, editingMemory.content)}>
-                                  <Check className="w-2.5 h-2.5 mr-0.5" />{t("ai.save")}
-                                </Button>
-                                <Button size="sm" variant="ghost" className="h-5 text-[9px] px-1.5" onClick={() => setEditingMemory(null)}>
-                                  {t("form.cancel")}
-                                </Button>
-                              </div>
-                            </div>
-                          ) : (
-                            <>
-                              <div className="flex items-center justify-between">
-                                <Badge variant="outline" className="text-[9px] h-4">{s.type}</Badge>
-                                <span className="text-[9px] text-muted-foreground">{s.confidence}%</span>
-                              </div>
-                              <p className="text-[11px] font-medium">{s.title}</p>
-                              <p className="text-[10px] text-muted-foreground line-clamp-2">{s.content}</p>
-                              <div className="flex gap-1 mt-1">
-                                <Button size="sm" className="h-5 text-[9px] px-1.5" onClick={() => handleSaveMemory(i, s.title, s.content)}>
-                                  <CheckCircle2 className="w-2.5 h-2.5 mr-0.5" />{t("ai.save")}
-                                </Button>
-                                <Button size="sm" variant="secondary" className="h-5 text-[9px] px-1.5" onClick={() => setEditingMemory({ index: i, title: s.title, content: s.content })}>
-                                  <Edit2 className="w-2.5 h-2.5 mr-0.5" />{t("ai.edit")}
-                                </Button>
-                                <Button size="sm" variant="ghost" className="h-5 text-[9px] px-1.5" onClick={() => setMemorySuggestions((p) => p.filter((_, j) => j !== i))}>
-                                  <XCircle className="w-2.5 h-2.5 mr-0.5" />{t("ai.ignore")}
-                                </Button>
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </CollapsibleContent>
-                </Collapsible>
+              {/* Memory suggestions — inline pill to reopen dialog */}
+              {memorySuggestions.length > 0 && !showFactsDialog && (
+                <button
+                  className="flex items-center gap-1.5 w-full rounded-md border border-secondary/40 bg-secondary/10 px-2.5 py-1.5 text-xs text-secondary hover:bg-secondary/20 transition-colors"
+                  onClick={() => setShowFactsDialog(true)}
+                >
+                  <BookMarked className="w-3 h-3 shrink-0" />
+                  <span className="flex-1 text-left">{memorySuggestions.length} {t("ai.memorySuggestions")}</span>
+                  <ChevronDown className="w-3 h-3 shrink-0" />
+                </button>
               )}
 
               {/* Coherence result */}
@@ -787,6 +726,86 @@ export function AiPanel({ projectId, sceneId, chapterId, onInsertText, onReplace
           </div>
         </div>
       )}
+      {/* Facts extraction dialog */}
+      <Dialog open={showFactsDialog} onOpenChange={(o) => { setShowFactsDialog(o); if (!o) setEditingMemory(null); }}>
+        <DialogContent className="max-w-2xl w-full max-h-[80vh] flex flex-col gap-0 p-0">
+          <DialogHeader className="px-6 pt-5 pb-3 border-b shrink-0">
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <BookMarked className="w-4 h-4 text-secondary" />
+              {t("ai.memorySuggestions")}
+              <Badge variant="secondary" className="ml-1 text-xs">{memorySuggestions.length}</Badge>
+            </DialogTitle>
+            <p className="text-xs text-muted-foreground mt-0.5">{t("ai.factsDialogHint")}</p>
+          </DialogHeader>
+
+          <ScrollArea className="flex-1 min-h-0 px-6 py-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {memorySuggestions.map((s, i) => (
+                <div key={i} className="border rounded-lg p-3 flex flex-col gap-2 bg-card">
+                  {editingMemory?.index === i ? (
+                    <div className="flex flex-col gap-2">
+                      <Input
+                        value={editingMemory.title}
+                        onChange={(e) => setEditingMemory({ ...editingMemory, title: e.target.value })}
+                        className="h-8 text-sm"
+                        placeholder={t("ai.memoryTitle")}
+                      />
+                      <Textarea
+                        value={editingMemory.content}
+                        onChange={(e) => setEditingMemory({ ...editingMemory, content: e.target.value })}
+                        className="text-sm min-h-[72px] resize-none"
+                        rows={3}
+                      />
+                      <div className="flex gap-2">
+                        <Button size="sm" className="flex-1 h-7 text-xs" onClick={() => handleSaveMemory(i, editingMemory.title, editingMemory.content)}>
+                          <Check className="w-3 h-3 mr-1" />{t("ai.save")}
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setEditingMemory(null)}>
+                          {t("form.cancel")}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center justify-between gap-2">
+                        <Badge variant="outline" className="text-[10px] capitalize">{s.type.replace("_", " ")}</Badge>
+                        <span className="text-[10px] text-muted-foreground shrink-0">{s.confidence}%</span>
+                      </div>
+                      <p className="text-sm font-semibold leading-snug">{s.title}</p>
+                      <p className="text-xs text-muted-foreground leading-relaxed">{s.content}</p>
+                      <div className="flex gap-1.5 mt-auto pt-1">
+                        <Button size="sm" className="h-7 text-xs flex-1" onClick={() => handleSaveMemory(i, s.title, s.content)}>
+                          <CheckCircle2 className="w-3 h-3 mr-1" />{t("ai.save")}
+                        </Button>
+                        <Button size="sm" variant="outline" className="h-7 text-xs px-2" onClick={() => setEditingMemory({ index: i, title: s.title, content: s.content })}>
+                          <Edit2 className="w-3 h-3" />
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-7 text-xs px-2 text-muted-foreground hover:text-destructive" onClick={() => setMemorySuggestions((p) => p.filter((_, j) => j !== i))}>
+                          <XCircle className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
+
+          <DialogFooter className="px-6 py-4 border-t shrink-0 flex-row gap-2">
+            <Button variant="ghost" className="mr-auto text-xs h-8" onClick={() => setShowFactsDialog(false)}>
+              {t("form.cancel")}
+            </Button>
+            <Button
+              className="h-8 text-xs bg-secondary text-secondary-foreground hover:bg-secondary/90"
+              onClick={handleSaveAllFacts}
+              disabled={memorySuggestions.length === 0}
+            >
+              <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
+              {t("ai.saveAll")} ({memorySuggestions.length})
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

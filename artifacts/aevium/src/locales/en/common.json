@@ -103,6 +103,7 @@
   "ai.rewriteSelection": "Rewrite Selection",
   "ai.reviewCoherence": "Review Coherence",
   "ai.extractFacts": "Extract Facts from Scene",
+  "ai.factsDialogHint": "Review the detected facts and save the ones relevant to your story.",
   "ai.saveAll": "Save All",
   "ai.noFactsFound": "No relevant facts found in this scene.",
   "ai.allFactsSaved": "facts saved to memory",
