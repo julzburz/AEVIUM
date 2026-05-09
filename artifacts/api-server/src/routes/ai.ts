@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { projectsTable, memoryItemsTable, continuityAlertsTable, sceneVersionsTable, scenesTable, aiCredentialsTable, chaptersTable } from "@workspace/db";
 import { requireAuth, getUserId } from "../lib/auth.js";
@@ -75,8 +75,18 @@ async function verifyProject(projectId: number, userId: string) {
  * default credential first, decrypts it, and falls back to the built-in provider.
  */
 async function getProviderForProject(projectId: number, userId: string) {
+  function buildFromCred(cred: typeof aiCredentialsTable.$inferSelect) {
+    if (!cred.encryptedSecret) return null;
+    const apiKey = decrypt(cred.encryptedSecret);
+    const model = cred.model ?? undefined;
+    if (cred.provider === "openai") return createOpenAIProvider(apiKey, model);
+    if (cred.provider === "anthropic") return createAnthropicProvider(apiKey, model);
+    return createCustomGeminiProvider(apiKey, model);
+  }
+
   try {
-    const [cred] = await db
+    // 1. Project-specific default
+    const [projectCred] = await db
       .select()
       .from(aiCredentialsTable)
       .where(
@@ -88,16 +98,33 @@ async function getProviderForProject(projectId: number, userId: string) {
       )
       .limit(1);
 
-    if (cred?.encryptedSecret) {
-      const apiKey = decrypt(cred.encryptedSecret);
-      const model = cred.model ?? undefined;
-      if (cred.provider === "openai") return createOpenAIProvider(apiKey, model);
-      if (cred.provider === "anthropic") return createAnthropicProvider(apiKey, model);
-      return createCustomGeminiProvider(apiKey, model);
+    if (projectCred) {
+      const provider = buildFromCred(projectCred);
+      if (provider) return provider;
+    }
+
+    // 2. Global default (projectId IS NULL)
+    const [globalCred] = await db
+      .select()
+      .from(aiCredentialsTable)
+      .where(
+        and(
+          isNull(aiCredentialsTable.projectId),
+          eq(aiCredentialsTable.userId, userId),
+          eq(aiCredentialsTable.isDefault, true)
+        )
+      )
+      .limit(1);
+
+    if (globalCred) {
+      const provider = buildFromCred(globalCred);
+      if (provider) return provider;
     }
   } catch {
     // fall through to built-in
   }
+
+  // 3. Built-in Gemini (free, no key needed)
   return geminiProvider;
 }
 

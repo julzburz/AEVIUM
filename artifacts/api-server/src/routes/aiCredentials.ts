@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { aiCredentialsTable, projectsTable } from "@workspace/db";
 import { requireAuth, getUserId } from "../lib/auth.js";
@@ -208,6 +208,138 @@ router.post("/projects/:projectId/ai-credentials/test", requireAuth, async (req,
   try {
     const ok = await geminiProvider.testConnection();
     res.json({ ok, message: ok ? "Conexión exitosa con Gemini (integrado)" : "Error al conectar con Gemini" });
+  } catch (e) {
+    res.json({ ok: false, message: String(e) });
+  }
+});
+
+// ── Global credentials (projectId = NULL) ────────────────────────────────
+
+router.get("/ai-credentials", requireAuth, async (req, res): Promise<void> => {
+  const userId = getUserId(req);
+  const creds = await db
+    .select()
+    .from(aiCredentialsTable)
+    .where(and(eq(aiCredentialsTable.userId, userId), isNull(aiCredentialsTable.projectId)));
+  res.json(creds.map(formatCredential));
+});
+
+router.post("/ai-credentials", requireAuth, async (req, res): Promise<void> => {
+  const userId = getUserId(req);
+  const body = CreateCredentialBody.safeParse(req.body);
+  if (!body.success) { res.status(400).json({ error: body.error.message }); return; }
+
+  const encryptedSecret = encrypt(body.data.secret);
+
+  if (body.data.isDefault) {
+    await db
+      .update(aiCredentialsTable)
+      .set({ isDefault: false })
+      .where(and(eq(aiCredentialsTable.userId, userId), isNull(aiCredentialsTable.projectId)));
+  }
+
+  const providerValue = body.data.provider === "replit" ? "gemini" : body.data.provider;
+  const [cred] = await db
+    .insert(aiCredentialsTable)
+    .values({
+      userId,
+      projectId: null,
+      provider: providerValue as "openai" | "anthropic" | "gemini" | "mistral",
+      model: body.data.model ?? null,
+      encryptedSecret,
+      isDefault: body.data.isDefault ?? false,
+    })
+    .returning();
+  res.status(201).json(formatCredential(cred));
+});
+
+router.patch("/ai-credentials/:id", requireAuth, async (req, res): Promise<void> => {
+  const userId = getUserId(req);
+  const id = Number(req.params.id);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+
+  const [existing] = await db
+    .select()
+    .from(aiCredentialsTable)
+    .where(and(eq(aiCredentialsTable.id, id), eq(aiCredentialsTable.userId, userId), isNull(aiCredentialsTable.projectId)))
+    .limit(1);
+  if (!existing) { res.status(404).json({ error: "Credential not found" }); return; }
+
+  const body = z.object({ isDefault: z.boolean().optional(), model: z.string().nullish() }).safeParse(req.body);
+  if (!body.success) { res.status(400).json({ error: body.error.message }); return; }
+
+  if (body.data.isDefault === true) {
+    await db
+      .update(aiCredentialsTable)
+      .set({ isDefault: false })
+      .where(and(eq(aiCredentialsTable.userId, userId), isNull(aiCredentialsTable.projectId)));
+  }
+
+  const [updated] = await db
+    .update(aiCredentialsTable)
+    .set({
+      ...(body.data.isDefault !== undefined ? { isDefault: body.data.isDefault } : {}),
+      ...(body.data.model !== undefined ? { model: body.data.model } : {}),
+    })
+    .where(eq(aiCredentialsTable.id, id))
+    .returning();
+
+  res.json(formatCredential(updated));
+});
+
+router.delete("/ai-credentials/:id", requireAuth, async (req, res): Promise<void> => {
+  const userId = getUserId(req);
+  const id = Number(req.params.id);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  await db
+    .delete(aiCredentialsTable)
+    .where(and(eq(aiCredentialsTable.id, id), eq(aiCredentialsTable.userId, userId), isNull(aiCredentialsTable.projectId)));
+  res.sendStatus(204);
+});
+
+router.post("/ai-credentials/test", requireAuth, async (req, res): Promise<void> => {
+  const userId = getUserId(req);
+  const body = TestCredentialBody.safeParse(req.body);
+  if (!body.success) { res.status(400).json({ error: body.error.message }); return; }
+
+  if (body.data.credentialId) {
+    const [cred] = await db
+      .select()
+      .from(aiCredentialsTable)
+      .where(and(eq(aiCredentialsTable.id, body.data.credentialId), eq(aiCredentialsTable.userId, userId), isNull(aiCredentialsTable.projectId)))
+      .limit(1);
+
+    if (!cred || !cred.encryptedSecret) {
+      res.json({ ok: false, message: "Credencial no encontrada" });
+      return;
+    }
+    try {
+      const apiKey = decrypt(cred.encryptedSecret);
+      const provider = buildProvider(cred.provider as SupportedProvider, apiKey, cred.model ?? undefined);
+      const ok = await provider.testConnection();
+      const name = cred.provider.charAt(0).toUpperCase() + cred.provider.slice(1);
+      res.json({ ok, message: ok ? `Conexión exitosa con ${name}` : `Error con ${name}` });
+    } catch (e) {
+      res.json({ ok: false, message: String(e) });
+    }
+    return;
+  }
+
+  if (body.data.secret) {
+    try {
+      const provider = buildProvider(body.data.provider, body.data.secret);
+      const ok = await provider.testConnection();
+      const name = body.data.provider.charAt(0).toUpperCase() + body.data.provider.slice(1);
+      res.json({ ok, message: ok ? `Conexión exitosa con ${name}` : `Error con ${name}` });
+    } catch (e) {
+      res.json({ ok: false, message: String(e) });
+    }
+    return;
+  }
+
+  try {
+    const ok = await geminiProvider.testConnection();
+    res.json({ ok, message: ok ? "Conexión exitosa con Gemini (integrado)" : "Error con Gemini" });
   } catch (e) {
     res.json({ ok: false, message: String(e) });
   }
