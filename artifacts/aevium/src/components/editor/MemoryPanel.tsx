@@ -82,8 +82,8 @@ function CharactersTab({ projectId }: { projectId: number }) {
   return (
     <div>
       <div className="flex justify-end gap-1 mb-2">
-        <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 text-primary hover:text-primary" onClick={() => setImportOpen(true)} data-testid="button-import-characters">
-          <Sparkles className="w-3 h-3" />{t('editor.import.characters.import')}
+        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-primary hover:text-primary" title={t('editor.import.characters.import')} onClick={() => setImportOpen(true)} data-testid="button-import-characters">
+          <Sparkles className="w-3.5 h-3.5" />
         </Button>
         <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={openNew} data-testid="button-new-character"><Plus className="w-3 h-3" />{t('editor.newCharacter')}</Button>
       </div>
@@ -276,8 +276,8 @@ function WorldRulesTab({ projectId }: { projectId: number }) {
   return (
     <div>
       <div className="flex justify-end gap-1 mb-2">
-        <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 text-primary hover:text-primary" onClick={() => setImportOpen(true)} data-testid="button-import-world-rules">
-          <Sparkles className="w-3 h-3" />{t('editor.import.worldRules.import')}
+        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-primary hover:text-primary" title={t('editor.import.worldRules.import')} onClick={() => setImportOpen(true)} data-testid="button-import-world-rules">
+          <Sparkles className="w-3.5 h-3.5" />
         </Button>
         <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={openNew} data-testid="button-new-world-rule"><Plus className="w-3 h-3" />{t('editor.newWorldRule')}</Button>
       </div>
