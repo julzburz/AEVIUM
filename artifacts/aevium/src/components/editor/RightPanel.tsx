@@ -79,7 +79,7 @@ export function RightPanel({ projectId, sceneId, chapterId, onInsertText, onRepl
           <ContinuityPanel projectId={projectId} sceneId={sceneId} />
         )}
         {tab === "timeline" && <TimelinePanel projectId={projectId} />}
-        {tab === "style" && <StylePanel projectId={projectId} analyzeText={tab === "style" ? analyzeText : null} />}
+        {tab === "style" && <StylePanel projectId={projectId} analyzeText={tab === "style" ? analyzeText : null} onAnalyzeConsumed={onAnalyzeConsumed} />}
         {tab === "notes" && <NotesPanel projectId={projectId} />}
       </div>
     </div>

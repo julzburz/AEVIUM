@@ -1030,6 +1030,56 @@ paths:
               schema:
                 $ref: "#/components/schemas/StyleGuide"
 
+  /projects/{projectId}/style-guide/chat:
+    post:
+      operationId: styleGuideChat
+      tags: [styleGuides]
+      summary: Chat with AI to build a writing style guide
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StyleChatBody"
+      responses:
+        "200":
+          description: Chat reply
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StyleChatResult"
+
+  /projects/{projectId}/style-guide/analyze:
+    post:
+      operationId: styleGuideAnalyze
+      tags: [styleGuides]
+      summary: Analyze a text sample to extract writing style parameters
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StyleAnalyzeBody"
+      responses:
+        "200":
+          description: Extracted style parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StyleAnalyzeResult"
+
   # ── AI Credentials ─────────────────────────────────────────────────────────
   /projects/{projectId}/ai-credentials:
     get:
@@ -2364,6 +2414,55 @@ components:
         instruction:
           type: string
       required: [projectId, instruction]
+
+    StyleChatMessage:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [user, assistant]
+        content:
+          type: string
+      required: [role, content]
+
+    StyleChatBody:
+      type: object
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/StyleChatMessage"
+      required: [messages]
+
+    StyleChatResult:
+      type: object
+      properties:
+        reply:
+          type: string
+        done:
+          type: boolean
+        params:
+          type: object
+          additionalProperties: true
+      required: [reply, done]
+
+    StyleAnalyzeBody:
+      type: object
+      properties:
+        text:
+          type: string
+          minLength: 50
+      required: [text]
+
+    StyleAnalyzeResult:
+      type: object
+      properties:
+        summary:
+          type: string
+        params:
+          type: object
+          additionalProperties: true
+      required: [summary, params]
 
     AiContextSummaryBody:
       type: object

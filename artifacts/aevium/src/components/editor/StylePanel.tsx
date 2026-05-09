@@ -16,7 +16,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Feather, Save, Send, Check, SlidersHorizontal } from "lucide-react";
 
-interface StylePanelProps { projectId: number; analyzeText?: string | null }
+interface StylePanelProps { projectId: number; analyzeText?: string | null; onAnalyzeConsumed?: () => void }
 
 type FormState = {
   narrator: UpsertStyleGuideBodyNarrator;
@@ -81,7 +81,7 @@ function paramsToForm(p: DetectedParams): FormState {
   };
 }
 
-export function StylePanel({ projectId, analyzeText }: StylePanelProps) {
+export function StylePanel({ projectId, analyzeText, onAnalyzeConsumed }: StylePanelProps) {
   const { t } = useI18n();
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -157,6 +157,7 @@ export function StylePanel({ projectId, analyzeText }: StylePanelProps) {
         <StyleChatView
           projectId={projectId}
           analyzeText={analyzeText}
+          onAnalyzeConsumed={onAnalyzeConsumed}
           onApply={(params) => {
             const newForm = paramsToForm(params);
             setForm(newForm);
@@ -182,11 +183,13 @@ export function StylePanel({ projectId, analyzeText }: StylePanelProps) {
 function StyleChatView({
   projectId,
   analyzeText,
+  onAnalyzeConsumed,
   onApply,
   onAdvanced,
 }: {
   projectId: number;
   analyzeText?: string | null;
+  onAnalyzeConsumed?: () => void;
   onApply: (params: DetectedParams) => void;
   onAdvanced: () => void;
 }) {
@@ -227,6 +230,7 @@ function StyleChatView({
         ...prev,
         { role: "assistant", content: `${t('editor.style.chat.analyzeSuccess')}: ${resp.summary}` },
       ]);
+      onAnalyzeConsumed?.();
     } catch {
       toast({ title: t('editor.style.chat.analyzeError'), variant: "destructive" });
     } finally {

@@ -54,6 +54,10 @@ import type {
   Project,
   ProjectSummary,
   Scene,
+  StyleAnalyzeBody,
+  StyleAnalyzeResult,
+  StyleChatBody,
+  StyleChatResult,
   StyleGuide,
   TestAiCredentialBody,
   TimelineEvent,
@@ -3946,6 +3950,180 @@ export const useUpsertStyleGuide = <
   TContext
 > => {
   return useMutation(getUpsertStyleGuideMutationOptions(options));
+};
+
+/**
+ * @summary Chat with AI to build a writing style guide
+ */
+export const getStyleGuideChatUrl = (projectId: number) => {
+  return `/api/projects/${projectId}/style-guide/chat`;
+};
+
+export const styleGuideChat = async (
+  projectId: number,
+  styleChatBody: StyleChatBody,
+  options?: RequestInit,
+): Promise<StyleChatResult> => {
+  return customFetch<StyleChatResult>(getStyleGuideChatUrl(projectId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(styleChatBody),
+  });
+};
+
+export const getStyleGuideChatMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof styleGuideChat>>,
+    TError,
+    { projectId: number; data: BodyType<StyleChatBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof styleGuideChat>>,
+  TError,
+  { projectId: number; data: BodyType<StyleChatBody> },
+  TContext
+> => {
+  const mutationKey = ["styleGuideChat"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof styleGuideChat>>,
+    { projectId: number; data: BodyType<StyleChatBody> }
+  > = (props) => {
+    const { projectId, data } = props ?? {};
+
+    return styleGuideChat(projectId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type StyleGuideChatMutationResult = NonNullable<
+  Awaited<ReturnType<typeof styleGuideChat>>
+>;
+export type StyleGuideChatMutationBody = BodyType<StyleChatBody>;
+export type StyleGuideChatMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Chat with AI to build a writing style guide
+ */
+export const useStyleGuideChat = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof styleGuideChat>>,
+    TError,
+    { projectId: number; data: BodyType<StyleChatBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof styleGuideChat>>,
+  TError,
+  { projectId: number; data: BodyType<StyleChatBody> },
+  TContext
+> => {
+  return useMutation(getStyleGuideChatMutationOptions(options));
+};
+
+/**
+ * @summary Analyze a text sample to extract writing style parameters
+ */
+export const getStyleGuideAnalyzeUrl = (projectId: number) => {
+  return `/api/projects/${projectId}/style-guide/analyze`;
+};
+
+export const styleGuideAnalyze = async (
+  projectId: number,
+  styleAnalyzeBody: StyleAnalyzeBody,
+  options?: RequestInit,
+): Promise<StyleAnalyzeResult> => {
+  return customFetch<StyleAnalyzeResult>(getStyleGuideAnalyzeUrl(projectId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(styleAnalyzeBody),
+  });
+};
+
+export const getStyleGuideAnalyzeMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof styleGuideAnalyze>>,
+    TError,
+    { projectId: number; data: BodyType<StyleAnalyzeBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof styleGuideAnalyze>>,
+  TError,
+  { projectId: number; data: BodyType<StyleAnalyzeBody> },
+  TContext
+> => {
+  const mutationKey = ["styleGuideAnalyze"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof styleGuideAnalyze>>,
+    { projectId: number; data: BodyType<StyleAnalyzeBody> }
+  > = (props) => {
+    const { projectId, data } = props ?? {};
+
+    return styleGuideAnalyze(projectId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type StyleGuideAnalyzeMutationResult = NonNullable<
+  Awaited<ReturnType<typeof styleGuideAnalyze>>
+>;
+export type StyleGuideAnalyzeMutationBody = BodyType<StyleAnalyzeBody>;
+export type StyleGuideAnalyzeMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Analyze a text sample to extract writing style parameters
+ */
+export const useStyleGuideAnalyze = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof styleGuideAnalyze>>,
+    TError,
+    { projectId: number; data: BodyType<StyleAnalyzeBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof styleGuideAnalyze>>,
+  TError,
+  { projectId: number; data: BodyType<StyleAnalyzeBody> },
+  TContext
+> => {
+  return useMutation(getStyleGuideAnalyzeMutationOptions(options));
 };
 
 /**

@@ -1075,6 +1075,46 @@ export const UpsertStyleGuideResponse = zod.object({
 });
 
 /**
+ * @summary Chat with AI to build a writing style guide
+ */
+export const StyleGuideChatParams = zod.object({
+  projectId: zod.coerce.number(),
+});
+
+export const StyleGuideChatBody = zod.object({
+  messages: zod.array(
+    zod.object({
+      role: zod.enum(["user", "assistant"]),
+      content: zod.string(),
+    }),
+  ),
+});
+
+export const StyleGuideChatResponse = zod.object({
+  reply: zod.string(),
+  done: zod.boolean(),
+  params: zod.record(zod.string(), zod.unknown()).optional(),
+});
+
+/**
+ * @summary Analyze a text sample to extract writing style parameters
+ */
+export const StyleGuideAnalyzeParams = zod.object({
+  projectId: zod.coerce.number(),
+});
+
+export const styleGuideAnalyzeBodyTextMin = 50;
+
+export const StyleGuideAnalyzeBody = zod.object({
+  text: zod.string().min(styleGuideAnalyzeBodyTextMin),
+});
+
+export const StyleGuideAnalyzeResponse = zod.object({
+  summary: zod.string(),
+  params: zod.record(zod.string(), zod.unknown()),
+});
+
+/**
  * @summary List AI provider credentials for a project
  */
 export const ListAiCredentialsParams = zod.object({

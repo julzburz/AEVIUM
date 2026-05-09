@@ -1057,6 +1057,43 @@ export interface AiCheckContradictionBody {
   instruction: string;
 }
 
+export type StyleChatMessageRole =
+  (typeof StyleChatMessageRole)[keyof typeof StyleChatMessageRole];
+
+export const StyleChatMessageRole = {
+  user: "user",
+  assistant: "assistant",
+} as const;
+
+export interface StyleChatMessage {
+  role: StyleChatMessageRole;
+  content: string;
+}
+
+export interface StyleChatBody {
+  messages: StyleChatMessage[];
+}
+
+export type StyleChatResultParams = { [key: string]: unknown };
+
+export interface StyleChatResult {
+  reply: string;
+  done: boolean;
+  params?: StyleChatResultParams;
+}
+
+export interface StyleAnalyzeBody {
+  /** @minLength 50 */
+  text: string;
+}
+
+export type StyleAnalyzeResultParams = { [key: string]: unknown };
+
+export interface StyleAnalyzeResult {
+  summary: string;
+  params: StyleAnalyzeResultParams;
+}
+
 export interface AiContextSummaryBody {
   projectId: number;
   /** @nullable */
