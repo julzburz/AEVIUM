@@ -58,15 +58,15 @@ export default function ProjectSettings() {
   };
 
   if (isLoading) {
-    return <div className="container py-8">{t('form.saving')}</div>;
+    return <div className="w-full max-w-2xl mx-auto px-6 py-8">{t('form.saving')}</div>;
   }
 
   if (!project) {
-    return <div className="container py-8">{t('notFound.message')}</div>;
+    return <div className="w-full max-w-2xl mx-auto px-6 py-8">{t('notFound.message')}</div>;
   }
 
   return (
-    <div className="container max-w-2xl py-8">
+    <div className="w-full max-w-2xl mx-auto px-6 py-8">
       <Button
         variant="ghost"
         onClick={() => setLocation(`/projects/${id}`)}

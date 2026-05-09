@@ -6,7 +6,7 @@ export default function SettingsPage() {
   const { t } = useI18n();
 
   return (
-    <div className="container max-w-3xl py-8">
+    <div className="w-full max-w-3xl mx-auto px-6 py-8">
       <h1 className="text-3xl font-bold mb-8" data-testid="text-settings-title">{t('settings.title')}</h1>
 
       <div className="space-y-8">
