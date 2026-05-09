@@ -1,3 +1,4 @@
+export * from "./vectorType";
 export * from "./projects";
 export * from "./books";
 export * from "./chapters";

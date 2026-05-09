@@ -1,5 +1,6 @@
 import { pgTable, serial, text, timestamp, integer, pgEnum } from "drizzle-orm/pg-core";
 import { projectsTable } from "./projects";
+import { vector } from "./vectorType";
 
 export const characterRoleEnum = pgEnum("character_role", ["protagonist", "antagonist", "secondary", "minor"]);
 
@@ -16,6 +17,7 @@ export const charactersTable = pgTable("characters", {
   injuries: text("injuries"),
   secrets: text("secrets"),
   relationships: text("relationships"),
+  embedding: vector("embedding", 768),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

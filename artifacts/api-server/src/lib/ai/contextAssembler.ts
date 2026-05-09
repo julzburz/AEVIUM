@@ -9,8 +9,10 @@ import {
   memoryItemsTable,
   styleGuidesTable,
 } from "@workspace/db";
-import { eq, and, asc } from "drizzle-orm";
+import { eq, and, asc, isNotNull } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import type { NarrativeContext } from "./types.js";
+import { buildQueryEmbedding } from "./embeddingService.js";
 
 /**
  * Verifies that sceneId belongs to projectId via the scene→chapter→book chain,
@@ -72,13 +74,83 @@ export async function verifyChapterOwnership(
   return !!row;
 }
 
+/**
+ * Fetches the most relevant characters for a project using semantic similarity
+ * if a query embedding is available, otherwise falls back to top-N.
+ */
+async function fetchRelevantCharacters(projectId: number, queryEmbedding: number[] | null) {
+  if (queryEmbedding) {
+    const vecStr = `[${queryEmbedding.join(",")}]`;
+    const semantic = await db
+      .select({ name: charactersTable.name, role: charactersTable.role, description: charactersTable.physicalDescription })
+      .from(charactersTable)
+      .where(and(eq(charactersTable.projectId, projectId), isNotNull(charactersTable.embedding)))
+      .orderBy(sql`${charactersTable.embedding} <=> ${vecStr}::vector`)
+      .limit(15);
+    if (semantic.length > 0) return semantic;
+  }
+  return db
+    .select({ name: charactersTable.name, role: charactersTable.role, description: charactersTable.physicalDescription })
+    .from(charactersTable)
+    .where(eq(charactersTable.projectId, projectId))
+    .limit(20);
+}
+
+/**
+ * Fetches the most relevant locations using semantic similarity or top-N fallback.
+ */
+async function fetchRelevantLocations(projectId: number, queryEmbedding: number[] | null) {
+  if (queryEmbedding) {
+    const vecStr = `[${queryEmbedding.join(",")}]`;
+    const semantic = await db
+      .select({ name: locationsTable.name, description: locationsTable.description })
+      .from(locationsTable)
+      .where(and(eq(locationsTable.projectId, projectId), isNotNull(locationsTable.embedding)))
+      .orderBy(sql`${locationsTable.embedding} <=> ${vecStr}::vector`)
+      .limit(8);
+    if (semantic.length > 0) return semantic;
+  }
+  return db
+    .select({ name: locationsTable.name, description: locationsTable.description })
+    .from(locationsTable)
+    .where(eq(locationsTable.projectId, projectId))
+    .limit(10);
+}
+
+/**
+ * Fetches the most relevant canonical memory items using semantic similarity or top-N fallback.
+ */
+async function fetchRelevantMemory(projectId: number, queryEmbedding: number[] | null) {
+  if (queryEmbedding) {
+    const vecStr = `[${queryEmbedding.join(",")}]`;
+    const semantic = await db
+      .select({ type: memoryItemsTable.type, title: memoryItemsTable.title, content: memoryItemsTable.content, status: memoryItemsTable.status })
+      .from(memoryItemsTable)
+      .where(and(
+        eq(memoryItemsTable.projectId, projectId),
+        eq(memoryItemsTable.status, "canonical"),
+        isNotNull(memoryItemsTable.embedding)
+      ))
+      .orderBy(sql`${memoryItemsTable.embedding} <=> ${vecStr}::vector`)
+      .limit(25);
+    if (semantic.length > 0) return semantic;
+  }
+  return db
+    .select({ type: memoryItemsTable.type, title: memoryItemsTable.title, content: memoryItemsTable.content, status: memoryItemsTable.status })
+    .from(memoryItemsTable)
+    .where(and(eq(memoryItemsTable.projectId, projectId), eq(memoryItemsTable.status, "canonical")))
+    .limit(40);
+}
+
 export async function assembleContext(
   sceneId: number,
   chapterId: number,
-  projectId: number
+  projectId: number,
+  queryText?: string
 ): Promise<NarrativeContext> {
+  const queryEmbedding = queryText ? await buildQueryEmbedding(queryText) : null;
+
   const [scene, chapter, characters, locations, memoryItems, styleGuide] = await Promise.all([
-    // Verify scene belongs to chapter as part of the query
     db.select().from(scenesTable)
       .where(and(eq(scenesTable.id, sceneId), eq(scenesTable.chapterId, chapterId)))
       .limit(1),
@@ -93,21 +165,9 @@ export async function assembleContext(
       .innerJoin(booksTable, eq(chaptersTable.bookId, booksTable.id))
       .where(and(eq(chaptersTable.id, chapterId), eq(booksTable.projectId, projectId)))
       .limit(1),
-    db
-      .select({ name: charactersTable.name, role: charactersTable.role, description: charactersTable.physicalDescription })
-      .from(charactersTable)
-      .where(eq(charactersTable.projectId, projectId))
-      .limit(20),
-    db
-      .select({ name: locationsTable.name, description: locationsTable.description })
-      .from(locationsTable)
-      .where(eq(locationsTable.projectId, projectId))
-      .limit(10),
-    db
-      .select({ type: memoryItemsTable.type, title: memoryItemsTable.title, content: memoryItemsTable.content, status: memoryItemsTable.status })
-      .from(memoryItemsTable)
-      .where(and(eq(memoryItemsTable.projectId, projectId), eq(memoryItemsTable.status, "canonical")))
-      .limit(40),
+    fetchRelevantCharacters(projectId, queryEmbedding),
+    fetchRelevantLocations(projectId, queryEmbedding),
+    fetchRelevantMemory(projectId, queryEmbedding),
     db.select().from(styleGuidesTable).where(eq(styleGuidesTable.projectId, projectId)).limit(1),
   ]);
 
@@ -195,21 +255,21 @@ export function buildSystemPrompt(ctx: NarrativeContext, language = "es"): strin
   }
 
   if (ctx.characters && ctx.characters.length > 0) {
-    lines.push(isEs ? "\n--- PERSONAJES ---" : "\n--- CHARACTERS ---");
+    lines.push(isEs ? "\n--- PERSONAJES RELEVANTES ---" : "\n--- RELEVANT CHARACTERS ---");
     ctx.characters.forEach((c) => {
       lines.push(`• ${c.name}${c.role ? ` (${c.role})` : ""}${c.description ? `: ${c.description.slice(0, 120)}` : ""}`);
     });
   }
 
   if (ctx.locations && ctx.locations.length > 0) {
-    lines.push(isEs ? "\n--- LUGARES ---" : "\n--- LOCATIONS ---");
+    lines.push(isEs ? "\n--- LUGARES RELEVANTES ---" : "\n--- RELEVANT LOCATIONS ---");
     ctx.locations.forEach((l) => {
       lines.push(`• ${l.name}${l.description ? `: ${l.description.slice(0, 80)}` : ""}`);
     });
   }
 
   if (ctx.memoryItems && ctx.memoryItems.length > 0) {
-    lines.push(isEs ? "\n--- MEMORIA NARRATIVA CANÓNICA ---" : "\n--- CANONICAL NARRATIVE MEMORY ---");
+    lines.push(isEs ? "\n--- MEMORIA NARRATIVA CANÓNICA RELEVANTE ---" : "\n--- RELEVANT CANONICAL NARRATIVE MEMORY ---");
     ctx.memoryItems.forEach((m) => {
       lines.push(`[${m.type}] ${m.title}: ${m.content.slice(0, 150)}`);
     });
@@ -217,20 +277,16 @@ export function buildSystemPrompt(ctx: NarrativeContext, language = "es"): strin
 
   if (ctx.previousScene) {
     lines.push(isEs ? "\n--- ESCENA ANTERIOR ---" : "\n--- PREVIOUS SCENE ---");
-    lines.push(`Título: ${ctx.previousScene.title}`);
-    if (ctx.previousScene.summary) lines.push(`Resumen: ${ctx.previousScene.summary}`);
-    else if (ctx.previousScene.content) lines.push(`Fragmento: ${ctx.previousScene.content.slice(0, 300)}…`);
+    if (ctx.previousScene.title) lines.push(isEs ? `Título: ${ctx.previousScene.title}` : `Title: ${ctx.previousScene.title}`);
+    if (ctx.previousScene.summary) lines.push(isEs ? `Resumen: ${ctx.previousScene.summary}` : `Summary: ${ctx.previousScene.summary}`);
+    if (ctx.previousScene.content) lines.push(ctx.previousScene.content.slice(-800));
   }
 
   if (ctx.nextScene) {
-    lines.push(isEs ? "\n--- ESCENA SIGUIENTE (referencia) ---" : "\n--- NEXT SCENE (reference) ---");
-    lines.push(`Título: ${ctx.nextScene.title}`);
-    if (ctx.nextScene.summary) lines.push(`Resumen: ${ctx.nextScene.summary}`);
+    lines.push(isEs ? "\n--- ESCENA SIGUIENTE (esbozo) ---" : "\n--- NEXT SCENE (outline) ---");
+    if (ctx.nextScene.title) lines.push(isEs ? `Título: ${ctx.nextScene.title}` : `Title: ${ctx.nextScene.title}`);
+    if (ctx.nextScene.summary) lines.push(ctx.nextScene.summary);
   }
-
-  lines.push(isEs
-    ? "\nResponde SOLO con el texto narrativo solicitado. Sin explicaciones, sin metadatos."
-    : "\nRespond ONLY with the requested narrative text. No explanations, no metadata.");
 
   return lines.join("\n");
 }

@@ -11,6 +11,7 @@ import {
   DeleteCharacterParams,
 } from "@workspace/api-zod";
 import { requireAuth, getUserId } from "../lib/auth";
+import { embedCharacter } from "../lib/ai/embeddingService.js";
 
 const router: IRouter = Router();
 
@@ -63,6 +64,7 @@ router.post("/projects/:projectId/characters", requireAuth, async (req, res): Pr
     .values({ ...parsed.data, projectId: params.data.projectId })
     .returning();
   res.status(201).json(character);
+  embedCharacter(character.id, character.name, character.role, character.physicalDescription, character.personality, character.motivations).catch(() => {});
 });
 
 router.patch("/projects/:projectId/characters/:id", requireAuth, async (req, res): Promise<void> => {
@@ -92,6 +94,7 @@ router.patch("/projects/:projectId/characters/:id", requireAuth, async (req, res
     return;
   }
   res.json(character);
+  embedCharacter(character.id, character.name, character.role, character.physicalDescription, character.personality, character.motivations).catch(() => {});
 });
 
 router.delete("/projects/:projectId/characters/:id", requireAuth, async (req, res): Promise<void> => {

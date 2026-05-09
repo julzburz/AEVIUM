@@ -159,7 +159,8 @@ router.post("/ai/continue-scene", requireAuth, async (req, res): Promise<void> =
   if (!ownershipOk) { res.status(403).json({ error: "Scene does not belong to this project" }); return; }
 
   const provider = await getProviderForProject(body.data.projectId, userId);
-  const ctx = await assembleContext(body.data.sceneId, body.data.chapterId, body.data.projectId);
+  const queryText = [body.data.instruction, body.data.instruction].filter(Boolean).join(" ") || undefined;
+  const ctx = await assembleContext(body.data.sceneId, body.data.chapterId, body.data.projectId, queryText);
   const systemPrompt = buildSystemPrompt(ctx);
   const prompt = buildContinueScenePrompt(ctx, body.data.instruction ?? undefined);
 
@@ -192,7 +193,8 @@ router.post("/ai/rewrite-selection", requireAuth, async (req, res): Promise<void
   if (!ownershipOk) { res.status(403).json({ error: "Scene does not belong to this project" }); return; }
 
   const provider = await getProviderForProject(body.data.projectId, userId);
-  const ctx = await assembleContext(body.data.sceneId, body.data.chapterId, body.data.projectId);
+  const queryText = `${body.data.selectedText} ${body.data.instruction}`.trim();
+  const ctx = await assembleContext(body.data.sceneId, body.data.chapterId, body.data.projectId, queryText);
   const systemPrompt = buildSystemPrompt(ctx);
   const prompt = buildRewriteSelectionPrompt(body.data.selectedText, body.data.instruction);
 
@@ -226,7 +228,7 @@ router.post("/ai/review-coherence", requireAuth, async (req, res): Promise<void>
   const provider = await getProviderForProject(body.data.projectId, userId);
   const ctx = await assembleContext(body.data.sceneId, body.data.chapterId, body.data.projectId);
   const systemPrompt = buildSystemPrompt(ctx);
-  const prompt = buildReviewCoherencePrompt(ctx);
+  const prompt = buildReviewCoherencePrompt(ctx);  
 
   const raw = await provider.generateText(prompt, systemPrompt);
   const parsed = safeParseJson(raw) as { issues?: unknown[]; summary?: string } | null;
@@ -344,7 +346,7 @@ router.post("/ai/free-chat", requireAuth, async (req, res): Promise<void> => {
 
   let ctx: NarrativeContext = {};
   if (body.data.sceneId && body.data.chapterId) {
-    ctx = await assembleContext(body.data.sceneId, body.data.chapterId, body.data.projectId);
+    ctx = await assembleContext(body.data.sceneId, body.data.chapterId, body.data.projectId, body.data.message);
   }
 
   const provider = await getProviderForProject(body.data.projectId, userId);

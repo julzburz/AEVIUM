@@ -1,5 +1,6 @@
 import { pgTable, serial, text, timestamp, integer, pgEnum } from "drizzle-orm/pg-core";
 import { projectsTable } from "./projects";
+import { vector } from "./vectorType";
 
 export const memoryItemTypeEnum = pgEnum("memory_item_type", [
   "event", "injury", "secret", "relationship", "death", "promise",
@@ -19,6 +20,7 @@ export const memoryItemsTable = pgTable("memory_items", {
   status: memoryStatusEnum("status").notNull().default("suggested"),
   confidence: integer("confidence"),
   sourceSceneId: integer("source_scene_id"),
+  embedding: vector("embedding", 768),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

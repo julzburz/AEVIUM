@@ -11,6 +11,7 @@ import {
   DeleteMemoryItemParams,
 } from "@workspace/api-zod";
 import { requireAuth, getUserId } from "../lib/auth";
+import { embedMemoryItem } from "../lib/ai/embeddingService.js";
 
 const router: IRouter = Router();
 
@@ -63,6 +64,7 @@ router.post("/projects/:projectId/memory", requireAuth, async (req, res): Promis
     .values({ ...parsed.data, projectId: params.data.projectId })
     .returning();
   res.status(201).json(item);
+  embedMemoryItem(item.id, item.title, item.content).catch(() => {});
 });
 
 router.patch("/projects/:projectId/memory/:id", requireAuth, async (req, res): Promise<void> => {
@@ -92,6 +94,9 @@ router.patch("/projects/:projectId/memory/:id", requireAuth, async (req, res): P
     return;
   }
   res.json(item);
+  if (item.title && item.content) {
+    embedMemoryItem(item.id, item.title, item.content).catch(() => {});
+  }
 });
 
 router.delete("/projects/:projectId/memory/:id", requireAuth, async (req, res): Promise<void> => {

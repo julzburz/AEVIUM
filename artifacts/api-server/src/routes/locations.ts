@@ -11,6 +11,7 @@ import {
   DeleteLocationParams,
 } from "@workspace/api-zod";
 import { requireAuth, getUserId } from "../lib/auth";
+import { embedLocation } from "../lib/ai/embeddingService.js";
 
 const router: IRouter = Router();
 
@@ -63,6 +64,7 @@ router.post("/projects/:projectId/locations", requireAuth, async (req, res): Pro
     .values({ ...parsed.data, projectId: params.data.projectId })
     .returning();
   res.status(201).json(location);
+  embedLocation(location.id, location.name, location.description, location.significance).catch(() => {});
 });
 
 router.patch("/projects/:projectId/locations/:id", requireAuth, async (req, res): Promise<void> => {
@@ -92,6 +94,7 @@ router.patch("/projects/:projectId/locations/:id", requireAuth, async (req, res)
     return;
   }
   res.json(location);
+  embedLocation(location.id, location.name, location.description, location.significance).catch(() => {});
 });
 
 router.delete("/projects/:projectId/locations/:id", requireAuth, async (req, res): Promise<void> => {

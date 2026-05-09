@@ -1,5 +1,6 @@
 import { pgTable, serial, text, timestamp, integer } from "drizzle-orm/pg-core";
 import { projectsTable } from "./projects";
+import { vector } from "./vectorType";
 
 export const locationsTable = pgTable("locations", {
   id: serial("id").primaryKey(),
@@ -7,6 +8,7 @@ export const locationsTable = pgTable("locations", {
   name: text("name").notNull(),
   description: text("description"),
   significance: text("significance"),
+  embedding: vector("embedding", 768),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
