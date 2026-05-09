@@ -62,5 +62,8 @@ export interface AiContradictionResult {
 
 export interface AiProvider {
   generateText(prompt: string, systemPrompt: string): Promise<string>;
+  generateStructured<T>(prompt: string, systemPrompt: string): Promise<T>;
+  embedText(text: string): Promise<number[]>;
+  validateConfig(): Promise<{ valid: boolean; error?: string }>;
   testConnection(): Promise<boolean>;
 }

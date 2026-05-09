@@ -13,8 +13,8 @@ export function buildContinueScenePrompt(ctx: NarrativeContext, instruction?: st
     lines.push("");
   }
   lines.push(ctx.sceneContent?.trim()
-    ? "Continúa la escena de forma natural, manteniendo el estilo y la voz narrativa establecidos. Escribe entre 200 y 500 palabras."
-    : "Comienza la escena con una apertura evocadora. Escribe entre 200 y 500 palabras.");
+    ? "Continúa la escena de forma natural, manteniendo el estilo y la voz narrativa establecidos. Escribe entre 800 y 1500 palabras."
+    : "Comienza la escena con una apertura evocadora y rica en detalles sensoriales. Escribe entre 800 y 1500 palabras.");
   return lines.join("\n");
 }
 

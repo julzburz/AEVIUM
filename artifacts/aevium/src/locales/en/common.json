@@ -286,5 +286,22 @@
   "settings.language": "Language",
   "settings.language.desc": "Choose your preferred language.",
   "notFound.title": "404 – Page Not Found",
-  "notFound.message": "The page you're looking for doesn't exist."
+  "notFound.message": "The page you're looking for doesn't exist.",
+  "ai.contradictionTitle": "Contradiction detected",
+  "ai.contradictionDesc": "Your instruction may contradict elements in canonical memory. Do you want to continue anyway?",
+  "ai.conflictsWith": "Conflicts with",
+  "ai.proceedAnyway": "Continue anyway",
+  "ai.memoryTitle": "Title",
+  "ai.edit": "Edit",
+  "settings.ai.credentials": "Project API Keys",
+  "settings.ai.geminiKey": "Gemini API Key",
+  "settings.ai.addKeyFor": "Add Gemini Key",
+  "settings.ai.setDefault": "Set Default",
+  "settings.ai.isDefault": "In Use",
+  "settings.ai.keyPlaceholder": "sk-... or AIza...",
+  "settings.ai.modelPlaceholder": "gemini-2.5-flash (optional)",
+  "settings.ai.saving": "Saving...",
+  "settings.ai.deleteConfirm": "Delete this API key?",
+  "settings.ai.noCredentialsProject": "No custom API keys for this project.",
+  "settings.ai.addSuccess": "Key added successfully"
 }

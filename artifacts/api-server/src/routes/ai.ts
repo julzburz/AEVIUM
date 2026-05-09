@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq, and } from "drizzle-orm";
 import { db } from "@workspace/db";
-import { projectsTable, memoryItemsTable, continuityAlertsTable } from "@workspace/db";
+import { projectsTable, memoryItemsTable, continuityAlertsTable, sceneVersionsTable, scenesTable } from "@workspace/db";
 import { requireAuth, getUserId } from "../lib/auth.js";
 import { geminiProvider } from "../lib/ai/geminiProvider.js";
 import { assembleContext, buildSystemPrompt } from "../lib/ai/contextAssembler.js";
@@ -88,7 +88,21 @@ router.post("/ai/continue-scene", requireAuth, async (req, res): Promise<void> =
   const prompt = buildContinueScenePrompt(ctx, body.data.instruction ?? undefined);
 
   const text = await geminiProvider.generateText(prompt, systemPrompt);
-  res.json({ text });
+
+  const originalContent = ctx.sceneContent ?? null;
+  const [version] = await db
+    .insert(sceneVersionsTable)
+    .values({
+      sceneId: body.data.sceneId,
+      originalContent,
+      userInstruction: body.data.instruction ?? null,
+      proposedContent: text,
+      status: "pending",
+      userId,
+    })
+    .returning({ id: sceneVersionsTable.id });
+
+  res.json({ text, sceneVersionId: version?.id ?? null });
 });
 
 router.post("/ai/rewrite-selection", requireAuth, async (req, res): Promise<void> => {
@@ -103,7 +117,20 @@ router.post("/ai/rewrite-selection", requireAuth, async (req, res): Promise<void
   const prompt = buildRewriteSelectionPrompt(body.data.selectedText, body.data.instruction);
 
   const text = await geminiProvider.generateText(prompt, systemPrompt);
-  res.json({ text });
+
+  const [version] = await db
+    .insert(sceneVersionsTable)
+    .values({
+      sceneId: body.data.sceneId,
+      originalContent: body.data.selectedText,
+      userInstruction: body.data.instruction,
+      proposedContent: text,
+      status: "pending",
+      userId,
+    })
+    .returning({ id: sceneVersionsTable.id });
+
+  res.json({ text, sceneVersionId: version?.id ?? null });
 });
 
 router.post("/ai/review-coherence", requireAuth, async (req, res): Promise<void> => {
@@ -154,11 +181,6 @@ router.post("/ai/extract-memory", requireAuth, async (req, res): Promise<void> =
   const project = await verifyProject(body.data.projectId, userId);
   if (!project) { res.status(404).json({ error: "Project not found" }); return; }
 
-  const memItems = await db
-    .select({ type: memoryItemsTable.type, title: memoryItemsTable.title, content: memoryItemsTable.content, status: memoryItemsTable.status })
-    .from(memoryItemsTable)
-    .where(and(eq(memoryItemsTable.projectId, body.data.projectId), eq(memoryItemsTable.status, "canonical")));
-
   const prompt = buildExtractMemoryPrompt(body.data.text);
   const systemPrompt = `Eres un asistente literario que extrae elementos narrativos importantes de textos de ficción. Responde SOLO en JSON válido.`;
   const raw = await geminiProvider.generateText(prompt, systemPrompt);
@@ -188,6 +210,11 @@ router.post("/ai/check-contradiction", requireAuth, async (req, res): Promise<vo
     .select({ type: memoryItemsTable.type, title: memoryItemsTable.title, content: memoryItemsTable.content, status: memoryItemsTable.status })
     .from(memoryItemsTable)
     .where(and(eq(memoryItemsTable.projectId, body.data.projectId), eq(memoryItemsTable.status, "canonical")));
+
+  if (memItems.length === 0) {
+    res.json({ hasContradiction: false, contradictions: [] });
+    return;
+  }
 
   const prompt = buildCheckContradictionPrompt(body.data.instruction, memItems);
   const systemPrompt = `Eres un analizador de continuidad narrativa. Responde SOLO en JSON válido.`;

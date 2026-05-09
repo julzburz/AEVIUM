@@ -40,6 +40,9 @@ interface SceneEditorProps {
   projectId: number;
   onWordCountChange: (count: number) => void;
   onSaveStatusChange?: (status: "idle" | "saving" | "saved") => void;
+  onSelectedTextChange?: (text: string) => void;
+  onInsertTextReady?: (insertFn: (text: string) => void) => void;
+  onAiRequest?: () => void;
 }
 
 interface SceneVersion {
@@ -136,7 +139,7 @@ function EditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> }) {
   );
 }
 
-export function SceneEditor({ sceneId, chapterId, projectId, onWordCountChange, onSaveStatusChange }: SceneEditorProps) {
+export function SceneEditor({ sceneId, chapterId, projectId, onWordCountChange, onSaveStatusChange, onSelectedTextChange, onInsertTextReady, onAiRequest }: SceneEditorProps) {
   const { t } = useI18n();
   const queryClient = useQueryClient();
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
@@ -293,6 +296,14 @@ export function SceneEditor({ sceneId, chapterId, projectId, onWordCountChange, 
     setNarrativeGoal(scene.narrativeGoal ?? "");
   }, [scene, editor, sceneId, onWordCountChange]);
 
+  useEffect(() => {
+    if (!editor || !onInsertTextReady) return;
+    onInsertTextReady((text: string) => {
+      editor.chain().focus().insertContent(text).run();
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editor]);
+
   // Flush: capture snapshot immediately and save (used on metadata blur / select changes)
   const flush = useCallback((overrides?: Partial<{ title: string; status: string; povCharacterId: number | null; locationId: number | null; timelinePosition: string; narrativeGoal: string }>) => {
     if (!editor) return;
@@ -444,7 +455,13 @@ export function SceneEditor({ sceneId, chapterId, projectId, onWordCountChange, 
             <span className="w-px h-3.5 bg-border mx-0.5" />
             <button
               className="h-6 px-1.5 flex items-center justify-center rounded text-xs text-primary/80 hover:bg-primary/10 transition-colors gap-1"
-              onClick={() => {}}
+              onClick={() => {
+                if (!editor) return;
+                const { from, to, empty } = editor.state.selection;
+                const selText = empty ? "" : editor.state.doc.textBetween(from, to, " ");
+                onSelectedTextChange?.(selText);
+                onAiRequest?.();
+              }}
               title={t('editor.aiAssist')}
               data-testid="bubble-ai"
             >

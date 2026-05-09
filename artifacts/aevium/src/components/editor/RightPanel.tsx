@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useI18n } from "@/lib/i18n";
 import { Bot, Users, AlertTriangle, Clock, Feather, StickyNote } from "lucide-react";
 import { MemoryPanel } from "./MemoryPanel";
@@ -18,11 +18,18 @@ interface RightPanelProps {
   selectedText?: string;
   analyzeText?: string | null;
   onAnalyzeConsumed?: () => void;
+  forceAiTab?: number;
 }
 
-export function RightPanel({ projectId, sceneId, chapterId, onInsertText, selectedText, analyzeText, onAnalyzeConsumed }: RightPanelProps) {
+export function RightPanel({ projectId, sceneId, chapterId, onInsertText, selectedText, analyzeText, onAnalyzeConsumed, forceAiTab }: RightPanelProps) {
   const { t } = useI18n();
   const [tab, setTab] = useState<RightTab>("memory");
+
+  useEffect(() => {
+    if (forceAiTab && forceAiTab > 0) {
+      setTab("ai");
+    }
+  }, [forceAiTab]);
 
   const topTabs: { key: RightTab; label: string; icon: React.ReactNode }[] = [
     { key: "ai",         label: t('editor.ai'),         icon: <Bot className="w-3 h-3" /> },

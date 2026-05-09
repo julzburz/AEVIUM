@@ -2,12 +2,14 @@ import { useState, useRef } from "react";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 import { customFetch } from "@workspace/api-client-react";
-import { Bot, Send, RotateCcw, RefreshCw, Zap, CheckCircle2, XCircle, ChevronDown, ChevronUp, Loader2, Wand2, MessageCircle, BookMarked } from "lucide-react";
+import { Bot, Send, RotateCcw, RefreshCw, Zap, CheckCircle2, XCircle, ChevronDown, ChevronUp, Loader2, Wand2, MessageCircle, BookMarked, AlertTriangle, Edit2, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useQueryClient } from "@tanstack/react-query";
 
 interface AiPanelProps {
@@ -25,9 +27,27 @@ interface MemorySuggestion {
   confidence: number;
 }
 
+interface EditingMemory {
+  index: number;
+  title: string;
+  content: string;
+}
+
 interface GenerationResult {
   text: string;
   contextSummary?: string;
+  sceneVersionId?: number | null;
+}
+
+interface ContradictionItem {
+  description: string;
+  conflictingMemory: string;
+  options: string[];
+}
+
+interface ContradictionResult {
+  hasContradiction: boolean;
+  contradictions: ContradictionItem[];
 }
 
 interface CoherenceIssue {
@@ -48,15 +68,43 @@ export function AiPanel({ projectId, sceneId, chapterId, onInsertText, selectedT
   const [generation, setGeneration] = useState<GenerationResult | null>(null);
   const [coherenceResult, setCoherenceResult] = useState<{ issues: CoherenceIssue[]; summary: string } | null>(null);
   const [memorySuggestions, setMemorySuggestions] = useState<MemorySuggestion[]>([]);
+  const [editingMemory, setEditingMemory] = useState<EditingMemory | null>(null);
   const [instruction, setInstruction] = useState("");
   const [chatMessage, setChatMessage] = useState("");
   const [chatHistory, setChatHistory] = useState<Array<{ role: "user" | "ai"; text: string }>>([]);
   const [showMemSuggestions, setShowMemSuggestions] = useState(false);
+  const [contradictionAlert, setContradictionAlert] = useState<ContradictionResult | null>(null);
+  const [pendingAction, setPendingAction] = useState<"continue" | "rewrite" | null>(null);
 
   const hasScene = !!sceneId && !!chapterId;
 
-  async function handleContinueScene() {
+  async function checkContradiction(): Promise<ContradictionResult | null> {
+    if (!instruction.trim()) return null;
+    try {
+      const result = await customFetch<ContradictionResult>(`/api/ai/check-contradiction`, {
+        method: "POST",
+        body: JSON.stringify({ projectId, instruction }),
+      });
+      return result;
+    } catch {
+      return null;
+    }
+  }
+
+  async function handleContinueScene(skipContradictionCheck = false) {
     if (!hasScene) return;
+
+    if (!skipContradictionCheck && instruction.trim()) {
+      setLoading("checking");
+      const result = await checkContradiction();
+      setLoading(null);
+      if (result?.hasContradiction) {
+        setContradictionAlert(result);
+        setPendingAction("continue");
+        return;
+      }
+    }
+
     setLoading("continue");
     setGeneration(null);
     setMemorySuggestions([]);
@@ -75,8 +123,20 @@ export function AiPanel({ projectId, sceneId, chapterId, onInsertText, selectedT
     }
   }
 
-  async function handleRewriteSelection() {
+  async function handleRewriteSelection(skipContradictionCheck = false) {
     if (!hasScene || !selectedText || !instruction) return;
+
+    if (!skipContradictionCheck && instruction.trim()) {
+      setLoading("checking");
+      const result = await checkContradiction();
+      setLoading(null);
+      if (result?.hasContradiction) {
+        setContradictionAlert(result);
+        setPendingAction("rewrite");
+        return;
+      }
+    }
+
     setLoading("rewrite");
     setGeneration(null);
     try {
@@ -91,6 +151,40 @@ export function AiPanel({ projectId, sceneId, chapterId, onInsertText, selectedT
     } finally {
       setLoading(null);
     }
+  }
+
+  function handleContradictionProceed() {
+    setContradictionAlert(null);
+    if (pendingAction === "continue") handleContinueScene(true);
+    else if (pendingAction === "rewrite") handleRewriteSelection(true);
+    setPendingAction(null);
+  }
+
+  async function handleAcceptGeneration() {
+    if (!generation) return;
+    if (generation.sceneVersionId && chapterId && sceneId) {
+      try {
+        await customFetch(`/api/chapters/${chapterId}/scenes/${sceneId}/versions/${generation.sceneVersionId}`, {
+          method: "PATCH",
+          body: JSON.stringify({ status: "accepted" }),
+        });
+      } catch { /* non-critical */ }
+    }
+    onInsertText?.(generation.text);
+    setGeneration(null);
+  }
+
+  async function handleRejectGeneration() {
+    if (!generation) return;
+    if (generation.sceneVersionId && chapterId && sceneId) {
+      try {
+        await customFetch(`/api/chapters/${chapterId}/scenes/${sceneId}/versions/${generation.sceneVersionId}`, {
+          method: "PATCH",
+          body: JSON.stringify({ status: "rejected" }),
+        });
+      } catch { /* non-critical */ }
+    }
+    setGeneration(null);
   }
 
   async function handleReviewCoherence() {
@@ -125,20 +219,23 @@ export function AiPanel({ projectId, sceneId, chapterId, onInsertText, selectedT
     }
   }
 
-  async function handleAcceptMemory(suggestion: MemorySuggestion) {
+  async function handleSaveMemory(index: number, title: string, content: string) {
+    const suggestion = memorySuggestions[index];
+    if (!suggestion) return;
     try {
       await customFetch(`/api/projects/${projectId}/memory`, {
         method: "POST",
         body: JSON.stringify({
-          type: suggestion.type,
-          title: suggestion.title,
-          content: suggestion.content,
-          status: "suggested",
+          type: editingMemory ? suggestion.type : suggestion.type,
+          title,
+          content,
+          status: "canonical",
           confidence: suggestion.confidence,
           sourceSceneId: sceneId ?? null,
         }),
       });
-      setMemorySuggestions((prev) => prev.filter((s) => s !== suggestion));
+      setMemorySuggestions((prev) => prev.filter((_, i) => i !== index));
+      setEditingMemory(null);
       toast({ title: t("ai.memorySaved") });
       qc.invalidateQueries({ queryKey: ["listMemoryItems"] });
     } catch (e) {
@@ -172,6 +269,35 @@ export function AiPanel({ projectId, sceneId, chapterId, onInsertText, selectedT
 
   return (
     <div className="flex flex-col h-full gap-2">
+      {/* Contradiction warning dialog */}
+      <Dialog open={!!contradictionAlert} onOpenChange={(o) => { if (!o) { setContradictionAlert(null); setPendingAction(null); } }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+              <AlertTriangle className="w-4 h-4" />
+              {t("ai.contradictionTitle")}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 text-sm">
+            <p className="text-muted-foreground">{t("ai.contradictionDesc")}</p>
+            {contradictionAlert?.contradictions.map((c, i) => (
+              <div key={i} className="bg-amber-500/10 border border-amber-500/20 rounded p-2 text-xs space-y-1">
+                <p className="font-medium text-foreground">{c.description}</p>
+                <p className="text-muted-foreground">{t("ai.conflictsWith")}: {c.conflictingMemory}</p>
+              </div>
+            ))}
+          </div>
+          <DialogFooter className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => { setContradictionAlert(null); setPendingAction(null); }}>
+              {t("form.cancel")}
+            </Button>
+            <Button size="sm" onClick={handleContradictionProceed}>
+              {t("ai.proceedAnyway")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Mode selector */}
       <div className="flex rounded-md border overflow-hidden text-xs shrink-0">
         <button
@@ -213,10 +339,10 @@ export function AiPanel({ projectId, sceneId, chapterId, onInsertText, selectedT
             <Button
               size="sm"
               className="w-full text-xs h-8"
-              onClick={handleContinueScene}
+              onClick={() => handleContinueScene()}
               disabled={!!loading}
             >
-              {loading === "continue" ? <Loader2 className="w-3 h-3 mr-1.5 animate-spin" /> : <Zap className="w-3 h-3 mr-1.5" />}
+              {loading === "continue" || loading === "checking" ? <Loader2 className="w-3 h-3 mr-1.5 animate-spin" /> : <Zap className="w-3 h-3 mr-1.5" />}
               {t("ai.continueScene")}
             </Button>
             {selectedText && (
@@ -224,7 +350,7 @@ export function AiPanel({ projectId, sceneId, chapterId, onInsertText, selectedT
                 size="sm"
                 variant="secondary"
                 className="w-full text-xs h-8"
-                onClick={handleRewriteSelection}
+                onClick={() => handleRewriteSelection()}
                 disabled={!!loading || !instruction}
               >
                 {loading === "rewrite" ? <Loader2 className="w-3 h-3 mr-1.5 animate-spin" /> : <RotateCcw className="w-3 h-3 mr-1.5" />}
@@ -251,27 +377,25 @@ export function AiPanel({ projectId, sceneId, chapterId, onInsertText, selectedT
                 <div className="border rounded-md p-2 flex flex-col gap-2">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-medium text-muted-foreground">{t("ai.generatedText")}</span>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-6 text-xs px-2"
-                      onClick={() => {
-                        onInsertText?.(generation.text);
-                        setGeneration(null);
-                      }}
-                    >
-                      {t("ai.accept")}
-                    </Button>
                   </div>
                   <p className="text-xs leading-relaxed whitespace-pre-wrap text-foreground/90">{generation.text}</p>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-6 text-xs self-end text-muted-foreground"
-                    onClick={() => setGeneration(null)}
-                  >
-                    <XCircle className="w-3 h-3 mr-1" />{t("ai.discard")}
-                  </Button>
+                  <div className="flex gap-1 mt-1">
+                    <Button
+                      size="sm"
+                      className="flex-1 h-7 text-xs"
+                      onClick={handleAcceptGeneration}
+                    >
+                      <CheckCircle2 className="w-3 h-3 mr-1" />{t("ai.accept")}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1 h-7 text-xs text-muted-foreground"
+                      onClick={handleRejectGeneration}
+                    >
+                      <XCircle className="w-3 h-3 mr-1" />{t("ai.discard")}
+                    </Button>
+                  </div>
                 </div>
               )}
 
@@ -289,20 +413,75 @@ export function AiPanel({ projectId, sceneId, chapterId, onInsertText, selectedT
                     <div className="flex flex-col gap-2 mt-2">
                       {memorySuggestions.map((s, i) => (
                         <div key={i} className="border rounded-md p-2 flex flex-col gap-1">
-                          <div className="flex items-center justify-between">
-                            <Badge variant="outline" className="text-[9px] h-4">{s.type}</Badge>
-                            <span className="text-[9px] text-muted-foreground">{s.confidence}%</span>
-                          </div>
-                          <p className="text-[11px] font-medium">{s.title}</p>
-                          <p className="text-[10px] text-muted-foreground line-clamp-2">{s.content}</p>
-                          <div className="flex gap-1 mt-1">
-                            <Button size="sm" className="h-5 text-[9px] px-1.5" onClick={() => handleAcceptMemory(s)}>
-                              <CheckCircle2 className="w-2.5 h-2.5 mr-0.5" />{t("ai.save")}
-                            </Button>
-                            <Button size="sm" variant="ghost" className="h-5 text-[9px] px-1.5" onClick={() => setMemorySuggestions((p) => p.filter((_, j) => j !== i))}>
-                              <XCircle className="w-2.5 h-2.5 mr-0.5" />{t("ai.ignore")}
-                            </Button>
-                          </div>
+                          {editingMemory?.index === i ? (
+                            /* Inline edit form */
+                            <div className="flex flex-col gap-1.5">
+                              <Input
+                                value={editingMemory.title}
+                                onChange={(e) => setEditingMemory({ ...editingMemory, title: e.target.value })}
+                                className="h-6 text-[11px] px-1.5"
+                                placeholder={t("ai.memoryTitle")}
+                              />
+                              <Textarea
+                                value={editingMemory.content}
+                                onChange={(e) => setEditingMemory({ ...editingMemory, content: e.target.value })}
+                                className="text-[10px] min-h-[48px] resize-none"
+                                rows={2}
+                              />
+                              <div className="flex gap-1">
+                                <Button
+                                  size="sm"
+                                  className="flex-1 h-5 text-[9px] px-1.5"
+                                  onClick={() => handleSaveMemory(i, editingMemory.title, editingMemory.content)}
+                                >
+                                  <Check className="w-2.5 h-2.5 mr-0.5" />{t("ai.save")}
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-5 text-[9px] px-1.5"
+                                  onClick={() => setEditingMemory(null)}
+                                >
+                                  {t("form.cancel")}
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            /* Display mode */
+                            <>
+                              <div className="flex items-center justify-between">
+                                <Badge variant="outline" className="text-[9px] h-4">{s.type}</Badge>
+                                <span className="text-[9px] text-muted-foreground">{s.confidence}%</span>
+                              </div>
+                              <p className="text-[11px] font-medium">{s.title}</p>
+                              <p className="text-[10px] text-muted-foreground line-clamp-2">{s.content}</p>
+                              <div className="flex gap-1 mt-1">
+                                <Button
+                                  size="sm"
+                                  className="h-5 text-[9px] px-1.5"
+                                  onClick={() => handleSaveMemory(i, s.title, s.content)}
+                                >
+                                  <CheckCircle2 className="w-2.5 h-2.5 mr-0.5" />{t("ai.save")}
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="secondary"
+                                  className="h-5 text-[9px] px-1.5"
+                                  onClick={() => setEditingMemory({ index: i, title: s.title, content: s.content })}
+                                >
+                                  <Edit2 className="w-2.5 h-2.5 mr-0.5" />{t("ai.edit")}
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-5 text-[9px] px-1.5"
+                                  onClick={() => setMemorySuggestions((p) => p.filter((_, j) => j !== i))}
+                                >
+                                  <XCircle className="w-2.5 h-2.5 mr-0.5" />{t("ai.ignore")}
+                                </Button>
+                              </div>
+                            </>
+                          )}
                         </div>
                       ))}
                     </div>

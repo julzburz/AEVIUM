@@ -286,5 +286,22 @@
   "settings.language": "Idioma",
   "settings.language.desc": "Elige tu idioma preferido.",
   "notFound.title": "404 – Página no encontrada",
-  "notFound.message": "La página que buscas no existe."
+  "notFound.message": "La página que buscas no existe.",
+  "ai.contradictionTitle": "Contradicción detectada",
+  "ai.contradictionDesc": "Tu instrucción puede contradecir elementos de la memoria canónica. ¿Quieres continuar de todas formas?",
+  "ai.conflictsWith": "Conflicto con",
+  "ai.proceedAnyway": "Continuar de todas formas",
+  "ai.memoryTitle": "Título",
+  "ai.edit": "Editar",
+  "settings.ai.credentials": "Claves API del proyecto",
+  "settings.ai.geminiKey": "Clave API de Gemini",
+  "settings.ai.addKeyFor": "Añadir clave Gemini",
+  "settings.ai.setDefault": "Predeterminado",
+  "settings.ai.isDefault": "En uso",
+  "settings.ai.keyPlaceholder": "sk-... o AIza...",
+  "settings.ai.modelPlaceholder": "gemini-2.5-flash (opcional)",
+  "settings.ai.saving": "Guardando...",
+  "settings.ai.deleteConfirm": "¿Eliminar esta clave API?",
+  "settings.ai.noCredentialsProject": "Sin claves API personalizadas para este proyecto.",
+  "settings.ai.addSuccess": "Clave añadida correctamente"
 }

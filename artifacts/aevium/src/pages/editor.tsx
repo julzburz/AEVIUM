@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useRef } from "react";
 import { Link } from "wouter";
 import { useParams } from "wouter";
 import { useGetProject, getGetProjectQueryKey, useListScenes, getListScenesQueryKey } from "@workspace/api-client-react";
@@ -29,6 +29,9 @@ export default function Editor() {
   const [chapterView, setChapterView] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [pendingAnalyzeText, setPendingAnalyzeText] = useState<string | null>(null);
+  const [selectedText, setSelectedText] = useState("");
+  const [aiTabTrigger, setAiTabTrigger] = useState(0);
+  const insertTextFnRef = useRef<((text: string) => void) | null>(null);
 
   const { data: project, isLoading: projectLoading } = useGetProject(id, {
     query: { enabled: !!id, queryKey: getGetProjectQueryKey(id) }
@@ -232,6 +235,9 @@ export default function Editor() {
               projectId={id}
               onWordCountChange={handleWordCountChange}
               onSaveStatusChange={handleSaveStatusChange}
+              onSelectedTextChange={setSelectedText}
+              onInsertTextReady={(fn) => { insertTextFnRef.current = fn; }}
+              onAiRequest={() => setAiTabTrigger((n) => n + 1)}
             />
           )}
         </div>
@@ -290,8 +296,11 @@ export default function Editor() {
               projectId={id}
               sceneId={selectedSceneId ?? undefined}
               chapterId={selectedChapterId ?? undefined}
+              onInsertText={(text) => { insertTextFnRef.current?.(text); }}
+              selectedText={selectedText}
               analyzeText={pendingAnalyzeText}
               onAnalyzeConsumed={() => setPendingAnalyzeText(null)}
+              forceAiTab={aiTabTrigger}
             />
           </div>
         </div>
