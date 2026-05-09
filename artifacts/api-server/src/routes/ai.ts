@@ -52,7 +52,7 @@ const ReviewCoherenceBody = z.object({
 
 const ExtractMemoryBody = z.object({
   projectId: z.coerce.number(),
-  text: z.string().min(1),
+  text: z.string().optional(),
   sceneId: z.coerce.number().nullish(),
 });
 
@@ -306,13 +306,27 @@ router.post("/ai/extract-memory", requireAuth, async (req, res): Promise<void> =
   const project = await verifyProject(body.data.projectId, userId);
   if (!project) { res.status(404).json({ error: "Project not found" }); return; }
 
+  let textToAnalyze = body.data.text ?? "";
+
   if (body.data.sceneId) {
     const ownershipOk = await verifySceneInProject(body.data.sceneId, body.data.projectId);
     if (!ownershipOk) { res.status(403).json({ error: "Scene not found or does not belong to this project" }); return; }
+
+    if (!textToAnalyze) {
+      const sceneRows = await db
+        .select({ content: scenesTable.content })
+        .from(scenesTable)
+        .where(eq(scenesTable.id, body.data.sceneId))
+        .limit(1);
+      const raw = sceneRows[0]?.content ?? "";
+      textToAnalyze = raw.replace(/<[^>]+>/g, "").trim();
+    }
   }
 
+  if (!textToAnalyze) { res.status(422).json({ error: "No text to analyze" }); return; }
+
   const provider = await getProviderForProject(body.data.projectId, userId);
-  const prompt = buildExtractMemoryPrompt(body.data.text);
+  const prompt = buildExtractMemoryPrompt(textToAnalyze);
   const systemPrompt = `Eres un asistente literario que extrae elementos narrativos importantes de textos de ficción. Responde SOLO en JSON válido.`;
   const raw = await provider.generateText(prompt, systemPrompt);
   const parsed = safeParseJson(raw) as { suggestions?: unknown[] } | null;

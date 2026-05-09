@@ -274,6 +274,60 @@ export function AiPanel({ projectId, sceneId, chapterId, onInsertText, onReplace
     }
   }
 
+  async function handleExtractFacts() {
+    if (!hasScene) return;
+    setLoading("extractFacts");
+    setMemorySuggestions([]);
+    setShowMemSuggestions(false);
+    try {
+      const resp = await customFetch<{ suggestions: MemorySuggestion[] }>(`/api/ai/extract-memory`, {
+        method: "POST",
+        body: JSON.stringify({ projectId, sceneId }),
+      });
+      if (resp.suggestions?.length > 0) {
+        setMemorySuggestions(resp.suggestions);
+        setShowMemSuggestions(true);
+      } else {
+        toast({ title: t("ai.noFactsFound") });
+      }
+    } catch (e) {
+      const msg = String(e);
+      if (msg.includes("No text to analyze") || msg.includes("422")) {
+        toast({ variant: "destructive", title: t("ai.sceneHasNoContent") });
+      } else {
+        toast({ variant: "destructive", title: "Error", description: msg });
+      }
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  async function handleSaveAllFacts() {
+    const toSave = [...memorySuggestions];
+    let saved = 0;
+    for (let i = 0; i < toSave.length; i++) {
+      const s = toSave[i];
+      try {
+        await customFetch(`/api/projects/${projectId}/memory`, {
+          method: "POST",
+          body: JSON.stringify({
+            type: s.type,
+            title: s.title,
+            content: s.content,
+            status: "canonical",
+            confidence: s.confidence,
+            sourceSceneId: sceneId ?? null,
+          }),
+        });
+        saved++;
+      } catch { /* skip failed ones */ }
+    }
+    setMemorySuggestions([]);
+    setShowMemSuggestions(false);
+    qc.invalidateQueries({ queryKey: ["listMemoryItems"] });
+    toast({ title: `${saved} ${t("ai.allFactsSaved")}` });
+  }
+
   async function handleSaveMemory(index: number, title: string, content: string) {
     const suggestion = memorySuggestions[index];
     if (!suggestion) return;
@@ -472,6 +526,16 @@ export function AiPanel({ projectId, sceneId, chapterId, onInsertText, onReplace
               {loading === "coherence" ? <Loader2 className="w-3 h-3 mr-1.5 animate-spin" /> : <RefreshCw className="w-3 h-3 mr-1.5" />}
               {t("ai.reviewCoherence")}
             </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full text-xs h-8 border-secondary/50 text-secondary hover:bg-secondary/15 hover:text-secondary"
+              onClick={handleExtractFacts}
+              disabled={!!loading}
+            >
+              {loading === "extractFacts" ? <Loader2 className="w-3 h-3 mr-1.5 animate-spin" /> : <BookMarked className="w-3 h-3 mr-1.5" />}
+              {t("ai.extractFacts")}
+            </Button>
           </div>
 
           {/* Results area */}
@@ -551,6 +615,17 @@ export function AiPanel({ projectId, sceneId, chapterId, onInsertText, onReplace
                       {showMemSuggestions ? <ChevronUp className="w-3 h-3 ml-auto" /> : <ChevronDown className="w-3 h-3 ml-auto" />}
                     </button>
                   </CollapsibleTrigger>
+                  {showMemSuggestions && (
+                    <div className="mt-1.5">
+                      <Button
+                        size="sm"
+                        className="w-full h-6 text-[10px] bg-secondary text-secondary-foreground hover:bg-secondary/90"
+                        onClick={handleSaveAllFacts}
+                      >
+                        <CheckCircle2 className="w-2.5 h-2.5 mr-1" />{t("ai.saveAll")} ({memorySuggestions.length})
+                      </Button>
+                    </div>
+                  )}
                   <CollapsibleContent>
                     <div className="flex flex-col gap-2 mt-2">
                       {memorySuggestions.map((s, i) => (
