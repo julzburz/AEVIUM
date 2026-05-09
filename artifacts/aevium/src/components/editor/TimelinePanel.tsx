@@ -122,7 +122,7 @@ export function TimelinePanel({ projectId }: TimelinePanelProps) {
               <div key={ev.id} className="relative group" data-testid={`item-event-${ev.id}`}>
                 <div className={`absolute -left-[17px] top-2 w-2.5 h-2.5 rounded-full border-2 border-background ${EVENT_TYPE_DOT[ev.eventType] ?? "bg-muted-foreground"}`} />
                 <div
-                  className="p-2 rounded-md bg-muted/40 text-xs cursor-pointer hover:bg-muted/70 transition-colors"
+                  className="p-2 rounded-md bg-muted/40 text-xs cursor-pointer hover:bg-secondary/15 transition-colors"
                   onClick={() => openEdit(ev)}
                 >
                   <div className="flex items-start justify-between gap-1">

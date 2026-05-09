@@ -16,7 +16,7 @@ export function UserMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="flex items-center gap-2 rounded-full outline-none hover:bg-muted p-1 pr-3 transition-colors">
+        <button className="flex items-center gap-2 rounded-full outline-none hover:bg-secondary/15 p-1 pr-3 transition-colors">
           <Avatar className="h-8 w-8 border border-border">
             <AvatarImage src={user.imageUrl} />
             <AvatarFallback><User className="h-4 w-4" /></AvatarFallback>

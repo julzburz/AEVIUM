@@ -93,7 +93,7 @@ function CharactersTab({ projectId }: { projectId: number }) {
           {items.map((c) => (
             <div
               key={c.id}
-              className="p-2 rounded-md bg-muted/40 text-xs group relative cursor-pointer hover:bg-muted/70 transition-colors"
+              className="p-2 rounded-md bg-muted/40 text-xs group relative cursor-pointer hover:bg-secondary/15 transition-colors"
               onClick={() => openEdit(c)}
               data-testid={`item-character-${c.id}`}
             >
@@ -204,7 +204,7 @@ function LocationsTab({ projectId }: { projectId: number }) {
           {items.map((l) => (
             <div
               key={l.id}
-              className="p-2 rounded-md bg-muted/40 text-xs group relative cursor-pointer hover:bg-muted/70 transition-colors"
+              className="p-2 rounded-md bg-muted/40 text-xs group relative cursor-pointer hover:bg-secondary/15 transition-colors"
               onClick={() => openEdit(l)}
               data-testid={`item-location-${l.id}`}
             >
@@ -296,7 +296,7 @@ function WorldRulesTab({ projectId }: { projectId: number }) {
           {items.map((r) => (
             <div
               key={r.id}
-              className="p-2 rounded-md bg-muted/40 text-xs group relative cursor-pointer hover:bg-muted/70 transition-colors"
+              className="p-2 rounded-md bg-muted/40 text-xs group relative cursor-pointer hover:bg-secondary/15 transition-colors"
               onClick={() => openEdit(r)}
               data-testid={`item-world-rule-${r.id}`}
             >
@@ -385,7 +385,7 @@ function MemoryItemsTab({ projectId }: { projectId: number }) {
           {items.map((m) => (
             <div
               key={m.id}
-              className="p-2 rounded-md bg-muted/40 text-xs group relative cursor-pointer hover:bg-muted/70 transition-colors"
+              className="p-2 rounded-md bg-muted/40 text-xs group relative cursor-pointer hover:bg-secondary/15 transition-colors"
               onClick={() => openEdit(m)}
               data-testid={`item-memory-${m.id}`}
             >

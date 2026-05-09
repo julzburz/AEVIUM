@@ -117,7 +117,7 @@ export default function ProjectSettings() {
                 "w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm text-left transition-colors",
                 activeTab === item.id
                   ? "bg-primary/10 text-primary font-medium"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                  : "text-muted-foreground hover:text-foreground hover:bg-secondary/15"
               )}
             >
               {item.icon}
