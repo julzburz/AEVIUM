@@ -14,6 +14,7 @@ export const continuityAlertsTable = pgTable("continuity_alerts", {
   severity: continuityAlertSeverityEnum("severity").notNull().default("info"),
   isResolved: boolean("is_resolved").notNull().default(false),
   resolvedAt: timestamp("resolved_at"),
+  dismissedAs: text("dismissed_as"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

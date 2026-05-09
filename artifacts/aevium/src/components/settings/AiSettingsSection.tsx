@@ -34,8 +34,6 @@ export function AiSettingsSection({ projectId }: AiSettingsSectionProps) {
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
-  const effectiveProjectId = projectId ?? 0;
-
   useEffect(() => {
     if (!projectId) return;
     loadCredentials();
@@ -59,9 +57,8 @@ export function AiSettingsSection({ projectId }: AiSettingsSectionProps) {
     setTesting(true);
     setTestResult(null);
     try {
-      const resp = await customFetch<{ ok: boolean; message: string }>(`/api/projects/${effectiveProjectId}/ai-credentials/test`, {
+      const resp = await customFetch<{ ok: boolean; message: string }>(`/api/ai/test-builtin`, {
         method: "POST",
-        body: JSON.stringify({ provider: "replit" }),
       });
       setTestResult(resp);
       toast({

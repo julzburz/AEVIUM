@@ -15,13 +15,14 @@ interface RightPanelProps {
   sceneId?: number;
   chapterId?: number;
   onInsertText?: (text: string) => void;
+  onReplaceText?: (text: string) => void;
   selectedText?: string;
   analyzeText?: string | null;
   onAnalyzeConsumed?: () => void;
   forceAiTab?: number;
 }
 
-export function RightPanel({ projectId, sceneId, chapterId, onInsertText, selectedText, analyzeText, onAnalyzeConsumed, forceAiTab }: RightPanelProps) {
+export function RightPanel({ projectId, sceneId, chapterId, onInsertText, onReplaceText, selectedText, analyzeText, onAnalyzeConsumed, forceAiTab }: RightPanelProps) {
   const { t } = useI18n();
   const [tab, setTab] = useState<RightTab>("memory");
 
@@ -69,6 +70,7 @@ export function RightPanel({ projectId, sceneId, chapterId, onInsertText, select
             sceneId={sceneId}
             chapterId={chapterId}
             onInsertText={onInsertText}
+            onReplaceText={onReplaceText}
             selectedText={selectedText}
           />
         )}

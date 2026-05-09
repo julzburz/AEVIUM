@@ -55,4 +55,26 @@ router.patch("/projects/:projectId/continuity-alerts/:id/resolve", requireAuth, 
   res.json(alert);
 });
 
+const DismissBody = z.object({ action: z.enum(["postponed", "ignored"]) });
+
+router.patch("/projects/:projectId/continuity-alerts/:id/dismiss", requireAuth, async (req, res): Promise<void> => {
+  const userId = getUserId(req);
+  const params = AlertParams.safeParse(req.params);
+  if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+  const body = DismissBody.safeParse(req.body);
+  if (!body.success) { res.status(400).json({ error: body.error.message }); return; }
+
+  const project = await verifyProject(params.data.projectId, userId);
+  if (!project) { res.status(404).json({ error: "Project not found" }); return; }
+
+  const [alert] = await db
+    .update(continuityAlertsTable)
+    .set({ dismissedAs: body.data.action })
+    .where(and(eq(continuityAlertsTable.id, params.data.id), eq(continuityAlertsTable.projectId, params.data.projectId)))
+    .returning();
+
+  if (!alert) { res.status(404).json({ error: "Alert not found" }); return; }
+  res.json(alert);
+});
+
 export default router;

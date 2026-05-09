@@ -42,6 +42,7 @@ interface SceneEditorProps {
   onSaveStatusChange?: (status: "idle" | "saving" | "saved") => void;
   onSelectedTextChange?: (text: string) => void;
   onInsertTextReady?: (insertFn: (text: string) => void) => void;
+  onReplaceSelectionReady?: (replaceFn: (text: string) => void) => void;
   onAiRequest?: () => void;
 }
 
@@ -139,7 +140,7 @@ function EditorToolbar({ editor }: { editor: ReturnType<typeof useEditor> }) {
   );
 }
 
-export function SceneEditor({ sceneId, chapterId, projectId, onWordCountChange, onSaveStatusChange, onSelectedTextChange, onInsertTextReady, onAiRequest }: SceneEditorProps) {
+export function SceneEditor({ sceneId, chapterId, projectId, onWordCountChange, onSaveStatusChange, onSelectedTextChange, onInsertTextReady, onReplaceSelectionReady, onAiRequest }: SceneEditorProps) {
   const { t } = useI18n();
   const queryClient = useQueryClient();
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
@@ -152,6 +153,9 @@ export function SceneEditor({ sceneId, chapterId, projectId, onWordCountChange, 
   const chapterIdRef = useRef(chapterId);
   useEffect(() => { sceneIdRef.current = sceneId; }, [sceneId]);
   useEffect(() => { chapterIdRef.current = chapterId; }, [chapterId]);
+
+  // Track the most recent non-empty selection range for rewrite replacement
+  const selectionRangeRef = useRef<{ from: number; to: number } | null>(null);
 
   // Tracks whether there is unsaved content since last save — updated on every edit, cleared on save
   const pendingSnapshotRef = useRef<{ content: string; wordCount: number; sceneId: number; chapterId: number } | null>(null);
@@ -259,6 +263,12 @@ export function SceneEditor({ sceneId, chapterId, projectId, onWordCountChange, 
       CharacterCount,
     ],
     content: "",
+    onSelectionUpdate: ({ editor: e }) => {
+      const { from, to, empty } = e.state.selection;
+      if (!empty) {
+        selectionRangeRef.current = { from, to };
+      }
+    },
     onUpdate: ({ editor: e }) => {
       // Capture content + identity IMMEDIATELY at edit time — not at timer fire time
       const content = e.getHTML();
@@ -300,6 +310,20 @@ export function SceneEditor({ sceneId, chapterId, projectId, onWordCountChange, 
     if (!editor || !onInsertTextReady) return;
     onInsertTextReady((text: string) => {
       editor.chain().focus().insertContent(text).run();
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editor]);
+
+  useEffect(() => {
+    if (!editor || !onReplaceSelectionReady) return;
+    onReplaceSelectionReady((text: string) => {
+      const range = selectionRangeRef.current;
+      if (range) {
+        editor.chain().focus().insertContentAt(range, text).run();
+        selectionRangeRef.current = null;
+      } else {
+        editor.chain().focus().insertContent(text).run();
+      }
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor]);

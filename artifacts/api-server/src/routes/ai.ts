@@ -358,4 +358,13 @@ router.post("/ai/free-chat", requireAuth, async (req, res): Promise<void> => {
   res.json({ text });
 });
 
+router.post("/ai/test-builtin", requireAuth, async (_req, res): Promise<void> => {
+  try {
+    const ok = await geminiProvider.testConnection();
+    res.json({ ok, message: ok ? "Conexión correcta con Gemini integrado" : "No se pudo conectar con Gemini" });
+  } catch (e) {
+    res.json({ ok: false, message: String(e) });
+  }
+});
+
 export default router;

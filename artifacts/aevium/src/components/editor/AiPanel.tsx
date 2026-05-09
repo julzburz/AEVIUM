@@ -21,6 +21,7 @@ interface AiPanelProps {
   sceneId?: number;
   chapterId?: number;
   onInsertText?: (text: string) => void;
+  onReplaceText?: (text: string) => void;
   selectedText?: string;
 }
 
@@ -74,7 +75,7 @@ interface ContextSummary {
 
 type AiMode = "actions" | "chat";
 
-export function AiPanel({ projectId, sceneId, chapterId, onInsertText, selectedText }: AiPanelProps) {
+export function AiPanel({ projectId, sceneId, chapterId, onInsertText, onReplaceText, selectedText }: AiPanelProps) {
   const { t } = useI18n();
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -215,7 +216,11 @@ export function AiPanel({ projectId, sceneId, chapterId, onInsertText, selectedT
         });
       } catch { /* non-critical */ }
     }
-    onInsertText?.(finalText);
+    if (generation.isRewrite && onReplaceText) {
+      onReplaceText(finalText);
+    } else {
+      onInsertText?.(finalText);
+    }
     setGeneration(null);
     setEditedProposal(null);
     setEditingProposal(false);

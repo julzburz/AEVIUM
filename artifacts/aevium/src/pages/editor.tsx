@@ -32,6 +32,7 @@ export default function Editor() {
   const [selectedText, setSelectedText] = useState("");
   const [aiTabTrigger, setAiTabTrigger] = useState(0);
   const insertTextFnRef = useRef<((text: string) => void) | null>(null);
+  const replaceTextFnRef = useRef<((text: string) => void) | null>(null);
 
   const { data: project, isLoading: projectLoading } = useGetProject(id, {
     query: { enabled: !!id, queryKey: getGetProjectQueryKey(id) }
@@ -237,6 +238,7 @@ export default function Editor() {
               onSaveStatusChange={handleSaveStatusChange}
               onSelectedTextChange={setSelectedText}
               onInsertTextReady={(fn) => { insertTextFnRef.current = fn; }}
+              onReplaceSelectionReady={(fn) => { replaceTextFnRef.current = fn; }}
               onAiRequest={() => setAiTabTrigger((n) => n + 1)}
             />
           )}
@@ -297,6 +299,7 @@ export default function Editor() {
               sceneId={selectedSceneId ?? undefined}
               chapterId={selectedChapterId ?? undefined}
               onInsertText={(text) => { insertTextFnRef.current?.(text); }}
+              onReplaceText={(text) => { replaceTextFnRef.current?.(text); }}
               selectedText={selectedText}
               analyzeText={pendingAnalyzeText}
               onAnalyzeConsumed={() => setPendingAnalyzeText(null)}
