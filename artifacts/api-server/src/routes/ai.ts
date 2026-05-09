@@ -20,6 +20,7 @@ import {
   buildImportStructurePrompt,
   buildImportCharactersPrompt,
   buildImportWorldRulesPrompt,
+  buildImportLocationsPrompt,
   type ChatHistoryEntry,
 } from "../lib/ai/prompts.js";
 import { buildQueryEmbedding } from "../lib/ai/embeddingService.js";
@@ -503,6 +504,44 @@ router.post("/ai/import-characters", requireAuth, async (req, res): Promise<void
   }));
 
   res.json({ characters });
+});
+
+const ImportLocationsBody = z.object({
+  projectId: z.coerce.number(),
+  text: z.string().min(1),
+});
+
+router.post("/ai/import-locations", requireAuth, async (req, res): Promise<void> => {
+  const userId = getUserId(req);
+  const body = ImportLocationsBody.safeParse(req.body);
+  if (!body.success) { res.status(400).json({ error: body.error.message }); return; }
+
+  const project = await verifyProject(body.data.projectId, userId);
+  if (!project) { res.status(404).json({ error: "Project not found" }); return; }
+
+  const provider = await getProviderForProject(body.data.projectId, userId);
+  const prompt = buildImportLocationsPrompt(body.data.text);
+
+  const raw = await provider.generateText(prompt, "Eres un asistente de edición literaria. Devuelve únicamente JSON válido, sin markdown ni texto adicional.");
+
+  let aiResult: { locations: { name: string; description: string | null; significance: string | null }[] };
+  try {
+    const cleaned = raw.replace(/^```(?:json)?\s*/im, "").replace(/```\s*$/m, "").trim();
+    aiResult = JSON.parse(cleaned);
+  } catch {
+    const match = raw.match(/\{[\s\S]*\}/);
+    if (!match) { res.status(422).json({ error: "AI did not return valid JSON", raw: raw.slice(0, 500) }); return; }
+    try { aiResult = JSON.parse(match[0]); }
+    catch { res.status(422).json({ error: "AI did not return valid JSON", raw: raw.slice(0, 500) }); return; }
+  }
+
+  const locations = (aiResult.locations ?? []).map(l => ({
+    name: l.name ?? "Lugar",
+    description: l.description ?? null,
+    significance: l.significance ?? null,
+  }));
+
+  res.json({ locations });
 });
 
 const ImportWorldRulesBody = z.object({

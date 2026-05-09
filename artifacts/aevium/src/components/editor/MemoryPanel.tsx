@@ -22,6 +22,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Users, Map, Globe, BookMarked, Plus, Trash2, Upload, Sparkles } from "lucide-react";
 import { CharacterImportDialog } from "./CharacterImportDialog";
 import { WorldRuleImportDialog } from "./WorldRuleImportDialog";
+import { LocationImportDialog } from "./LocationImportDialog";
 
 type MemSubTab = "characters" | "locations" | "worldRules" | "items";
 
@@ -165,6 +166,7 @@ function LocationsTab({ projectId }: { projectId: number }) {
 
   const [editing, setEditing] = useState<Location | null | "new">(null);
   const [form, setForm] = useState({ name: "", description: "", significance: "" });
+  const [importOpen, setImportOpen] = useState(false);
 
   const openNew = () => { setForm({ name: "", description: "", significance: "" }); setEditing("new"); };
   const openEdit = (l: Location) => { setForm({ name: l.name, description: l.description ?? "", significance: l.significance ?? "" }); setEditing(l); };
@@ -191,7 +193,10 @@ function LocationsTab({ projectId }: { projectId: number }) {
 
   return (
     <div>
-      <div className="flex justify-end mb-2">
+      <div className="flex justify-end gap-1 mb-2">
+        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-primary hover:text-primary" title={t('editor.import.locations.import')} onClick={() => setImportOpen(true)} data-testid="button-import-locations">
+          <Sparkles className="w-3.5 h-3.5" />
+        </Button>
         <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={openNew} data-testid="button-new-location"><Plus className="w-3 h-3" />{t('editor.newLocation')}</Button>
       </div>
       {items.length === 0 ? <p className="text-xs text-muted-foreground py-2">{t('editor.noLocations')}</p> : (
@@ -233,6 +238,11 @@ function LocationsTab({ projectId }: { projectId: number }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <LocationImportDialog
+        projectId={projectId}
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+      />
     </div>
   );
 }

@@ -182,6 +182,24 @@ export function buildImportCharactersPrompt(text: string): string {
   ].join("\n");
 }
 
+export function buildImportLocationsPrompt(text: string): string {
+  const preview = text.slice(0, 12000);
+  return [
+    "--- TEXTO CON DESCRIPCIONES DE LUGARES ---",
+    preview,
+    "",
+    "Extrae TODOS los lugares, escenarios o localizaciones descritos en el texto y devuelve EXCLUSIVAMENTE este JSON:",
+    '{"locations":[{"name":"...","description":"...","significance":"..."}]}',
+    "",
+    "Reglas:",
+    "1. name: nombre del lugar tal como aparece en el texto.",
+    "2. description: descripción física o ambiental del lugar extraída literalmente.",
+    "3. significance: importancia narrativa o simbólica del lugar para la historia. Si no se menciona, usa null.",
+    "4. No inventes información que no esté en el texto.",
+    "5. Devuelve SOLO el JSON, sin markdown ni explicación adicional.",
+  ].join("\n");
+}
+
 export function buildImportWorldRulesPrompt(text: string): string {
   const preview = text.slice(0, 12000);
   return [
