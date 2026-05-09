@@ -480,16 +480,9 @@ router.post("/ai/import-characters", requireAuth, async (req, res): Promise<void
 
   const raw = await provider.generateText(prompt, "Eres un asistente de edición literaria. Devuelve únicamente JSON válido, sin markdown ni texto adicional.");
 
-  let aiResult: { characters: { name: string; role: string; physicalDescription: string | null; personality: string | null; motivations: string | null; currentState: string | null; injuries: string | null; secrets: string | null }[] };
-  try {
-    const cleaned = raw.replace(/^```(?:json)?\s*/im, "").replace(/```\s*$/m, "").trim();
-    aiResult = JSON.parse(cleaned);
-  } catch {
-    const match = raw.match(/\{[\s\S]*\}/);
-    if (!match) { res.status(422).json({ error: "AI did not return valid JSON", raw: raw.slice(0, 500) }); return; }
-    try { aiResult = JSON.parse(match[0]); }
-    catch { res.status(422).json({ error: "AI did not return valid JSON", raw: raw.slice(0, 500) }); return; }
-  }
+  type CharactersResult = { characters: { name: string; role: string; physicalDescription: string | null; personality: string | null; motivations: string | null; currentState: string | null; injuries: string | null; secrets: string | null }[] };
+  const aiResult = extractJson<CharactersResult>(raw);
+  if (!aiResult) { console.error("[import-characters] raw AI response:", raw.slice(0, 800)); res.status(422).json({ error: "AI did not return valid JSON", raw: raw.slice(0, 500) }); return; }
 
   const validRoles = ["protagonist", "antagonist", "secondary", "minor"];
   const characters = (aiResult.characters ?? []).map(c => ({
@@ -505,6 +498,20 @@ router.post("/ai/import-characters", requireAuth, async (req, res): Promise<void
 
   res.json({ characters });
 });
+
+function extractJson<T>(raw: string): T | null {
+  const strip = raw
+    .replace(/^```(?:json)?\s*/im, "")
+    .replace(/```\s*$/m, "")
+    .trim();
+  try { return JSON.parse(strip) as T; } catch { /* try harder */ }
+  const first = strip.indexOf("{");
+  const last  = strip.lastIndexOf("}");
+  if (first !== -1 && last > first) {
+    try { return JSON.parse(strip.slice(first, last + 1)) as T; } catch { /* fall through */ }
+  }
+  return null;
+}
 
 const ImportLocationsBody = z.object({
   projectId: z.coerce.number(),
@@ -524,16 +531,9 @@ router.post("/ai/import-locations", requireAuth, async (req, res): Promise<void>
 
   const raw = await provider.generateText(prompt, "Eres un asistente de edición literaria. Devuelve únicamente JSON válido, sin markdown ni texto adicional.");
 
-  let aiResult: { locations: { name: string; description: string | null; significance: string | null }[] };
-  try {
-    const cleaned = raw.replace(/^```(?:json)?\s*/im, "").replace(/```\s*$/m, "").trim();
-    aiResult = JSON.parse(cleaned);
-  } catch {
-    const match = raw.match(/\{[\s\S]*\}/);
-    if (!match) { res.status(422).json({ error: "AI did not return valid JSON", raw: raw.slice(0, 500) }); return; }
-    try { aiResult = JSON.parse(match[0]); }
-    catch { res.status(422).json({ error: "AI did not return valid JSON", raw: raw.slice(0, 500) }); return; }
-  }
+  type LocationsResult = { locations: { name: string; description: string | null; significance: string | null }[] };
+  const aiResult = extractJson<LocationsResult>(raw);
+  if (!aiResult) { console.error("[import-locations] raw AI response:", raw.slice(0, 800)); res.status(422).json({ error: "AI did not return valid JSON", raw: raw.slice(0, 500) }); return; }
 
   const locations = (aiResult.locations ?? []).map(l => ({
     name: l.name ?? "Lugar",
@@ -562,16 +562,9 @@ router.post("/ai/import-world-rules", requireAuth, async (req, res): Promise<voi
 
   const raw = await provider.generateText(prompt, "Eres un asistente de edición literaria. Devuelve únicamente JSON válido, sin markdown ni texto adicional.");
 
-  let aiResult: { worldRules: { title: string; category: string | null; content: string }[] };
-  try {
-    const cleaned = raw.replace(/^```(?:json)?\s*/im, "").replace(/```\s*$/m, "").trim();
-    aiResult = JSON.parse(cleaned);
-  } catch {
-    const match = raw.match(/\{[\s\S]*\}/);
-    if (!match) { res.status(422).json({ error: "AI did not return valid JSON", raw: raw.slice(0, 500) }); return; }
-    try { aiResult = JSON.parse(match[0]); }
-    catch { res.status(422).json({ error: "AI did not return valid JSON", raw: raw.slice(0, 500) }); return; }
-  }
+  type WorldRulesResult = { worldRules: { title: string; category: string | null; content: string }[] };
+  const aiResult = extractJson<WorldRulesResult>(raw);
+  if (!aiResult) { console.error("[import-world-rules] raw AI response:", raw.slice(0, 800)); res.status(422).json({ error: "AI did not return valid JSON", raw: raw.slice(0, 500) }); return; }
 
   const worldRules = (aiResult.worldRules ?? []).map(r => ({
     title: r.title ?? "Regla",
