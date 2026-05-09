@@ -119,8 +119,9 @@ async function fetchRelevantLocations(projectId: number, queryEmbedding: number[
 
 /**
  * Fetches the most relevant canonical memory items using semantic similarity or top-N fallback.
+ * Exported so other endpoints (e.g. check-contradiction) can reuse the same semantic logic.
  */
-async function fetchRelevantMemory(projectId: number, queryEmbedding: number[] | null) {
+export async function fetchRelevantMemory(projectId: number, queryEmbedding: number[] | null) {
   if (queryEmbedding) {
     const vecStr = `[${queryEmbedding.join(",")}]`;
     const semantic = await db

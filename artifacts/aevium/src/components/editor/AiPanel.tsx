@@ -301,6 +301,7 @@ export function AiPanel({ projectId, sceneId, chapterId, onInsertText, onReplace
   async function handleChat() {
     if (!chatMessage.trim()) return;
     const userMsg = chatMessage.trim();
+    const currentHistory = chatHistory;
     setChatHistory((h) => [...h, { role: "user", text: userMsg }]);
     setChatMessage("");
     setLoading("chat");
@@ -312,6 +313,10 @@ export function AiPanel({ projectId, sceneId, chapterId, onInsertText, onReplace
           sceneId: sceneId ?? null,
           chapterId: chapterId ?? null,
           message: userMsg,
+          history: currentHistory.map((h) => ({
+            role: h.role === "user" ? "user" : "assistant",
+            text: h.text,
+          })),
         }),
       });
       setChatHistory((h) => [...h, { role: "ai", text: resp.text }]);
@@ -664,6 +669,16 @@ export function AiPanel({ projectId, sceneId, chapterId, onInsertText, onReplace
                 <div className="text-center py-6 text-xs text-muted-foreground">
                   <Bot className="w-8 h-8 mx-auto mb-1.5 text-primary/30" />
                   {t("ai.chatPlaceholder")}
+                </div>
+              )}
+              {chatHistory.length > 0 && (
+                <div className="flex justify-end">
+                  <button
+                    className="text-[9px] text-muted-foreground hover:text-destructive transition-colors"
+                    onClick={() => setChatHistory([])}
+                  >
+                    {t("ai.clearChat")}
+                  </button>
                 </div>
               )}
               {chatHistory.map((msg, i) => (

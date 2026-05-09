@@ -6,7 +6,7 @@ import { requireAuth, getUserId } from "../lib/auth.js";
 import { geminiProvider, createCustomGeminiProvider } from "../lib/ai/geminiProvider.js";
 import { createOpenAIProvider } from "../lib/ai/openaiProvider.js";
 import { createAnthropicProvider } from "../lib/ai/anthropicProvider.js";
-import { assembleContext, buildSystemPrompt, verifySceneOwnership, verifyChapterOwnership, verifySceneInProject } from "../lib/ai/contextAssembler.js";
+import { assembleContext, buildSystemPrompt, verifySceneOwnership, verifyChapterOwnership, verifySceneInProject, fetchRelevantMemory } from "../lib/ai/contextAssembler.js";
 import { decrypt } from "../lib/encryption.js";
 import type { NarrativeContext } from "../lib/ai/types.js";
 import {
@@ -17,7 +17,9 @@ import {
   buildCheckContradictionPrompt,
   buildFreeChatPrompt,
   buildFreeChatSystemPrompt,
+  type ChatHistoryEntry,
 } from "../lib/ai/prompts.js";
+import { buildQueryEmbedding } from "../lib/ai/embeddingService.js";
 import { charactersTable, locationsTable, styleGuidesTable } from "@workspace/db";
 import z from "zod";
 
@@ -60,6 +62,7 @@ const FreeChatBody = z.object({
   sceneId: z.coerce.number().nullish(),
   chapterId: z.coerce.number().nullish(),
   message: z.string().min(1),
+  history: z.array(z.object({ role: z.enum(["user", "assistant"]), text: z.string() })).optional(),
 });
 
 async function verifyProject(projectId: number, userId: string) {
@@ -330,10 +333,9 @@ router.post("/ai/check-contradiction", requireAuth, async (req, res): Promise<vo
   const project = await verifyProject(body.data.projectId, userId);
   if (!project) { res.status(404).json({ error: "Project not found" }); return; }
 
-  const memItems = await db
-    .select({ type: memoryItemsTable.type, title: memoryItemsTable.title, content: memoryItemsTable.content, status: memoryItemsTable.status })
-    .from(memoryItemsTable)
-    .where(and(eq(memoryItemsTable.projectId, body.data.projectId), eq(memoryItemsTable.status, "canonical")));
+  // Use semantic search to find the most relevant memory items for the instruction
+  const queryEmbedding = await buildQueryEmbedding(body.data.instruction);
+  const memItems = await fetchRelevantMemory(body.data.projectId, queryEmbedding);
 
   if (memItems.length === 0) {
     res.json({ hasContradiction: false, contradictions: [] });
@@ -381,9 +383,14 @@ router.post("/ai/free-chat", requireAuth, async (req, res): Promise<void> => {
     ctx = await assembleContext(body.data.sceneId, body.data.chapterId, body.data.projectId, body.data.message);
   }
 
+  const history: ChatHistoryEntry[] = (body.data.history ?? []).map((h) => ({
+    role: h.role,
+    text: h.text,
+  }));
+
   const provider = await getProviderForProject(body.data.projectId, userId);
   const systemPrompt = buildFreeChatSystemPrompt();
-  const prompt = buildFreeChatPrompt(ctx, body.data.message);
+  const prompt = buildFreeChatPrompt(ctx, body.data.message, history);
   const text = await provider.generateText(prompt, systemPrompt);
   res.json({ text });
 });

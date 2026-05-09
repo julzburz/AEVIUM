@@ -325,12 +325,13 @@ function StyleChatView({
         </div>
       </ScrollArea>
 
-      {!detectedParams && (
+      {/* Input is always visible so the chat can continue after params are detected */}
+      {!applied && (
         <div className="mt-2 flex gap-1.5 shrink-0">
           <Input
             ref={inputRef}
             className="h-7 text-xs flex-1"
-            placeholder={t('editor.style.chat.placeholder')}
+            placeholder={detectedParams ? t('editor.style.chat.placeholderMore') : t('editor.style.chat.placeholder')}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
@@ -345,6 +346,26 @@ function StyleChatView({
             data-testid="button-style-chat-send"
           >
             <Send className="w-3 h-3" />
+          </Button>
+        </div>
+      )}
+
+      {applied && (
+        <div className="mt-2 flex gap-2 shrink-0">
+          <Button
+            size="sm"
+            variant="outline"
+            className="flex-1 h-7 text-xs"
+            onClick={() => {
+              setApplied(false);
+              setDetectedParams(null);
+              setMessages([
+                { role: "assistant", content: t('editor.style.chat.greeting') },
+                { role: "assistant", content: t('editor.style.chat.continueQuestion') },
+              ]);
+            }}
+          >
+            {t('editor.style.chat.continueSetup')}
           </Button>
         </div>
       )}

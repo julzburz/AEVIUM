@@ -78,20 +78,38 @@ export function buildCheckContradictionPrompt(instruction: string, memoryItems: 
   ].join("\n");
 }
 
-export function buildFreeChatPrompt(ctx: NarrativeContext, message: string): string {
+export type ChatHistoryEntry = { role: "user" | "assistant"; text: string };
+
+export function buildFreeChatPrompt(ctx: NarrativeContext, message: string, history: ChatHistoryEntry[] = []): string {
   const lines: string[] = [];
+
   if (ctx.sceneContent) {
     const stripped = ctx.sceneContent.replace(/<[^>]+>/g, "").slice(-1000);
     lines.push("--- CONTEXTO DE LA ESCENA ---");
     lines.push(stripped);
     lines.push("");
   }
-  lines.push(`Pregunta/solicitud del autor: ${message}`);
+
+  if (history.length > 0) {
+    lines.push("--- CONVERSACIÓN ANTERIOR ---");
+    for (const entry of history.slice(-12)) {
+      lines.push(`${entry.role === "user" ? "Autor" : "AEVIUM"}: ${entry.text}`);
+    }
+    lines.push("");
+  }
+
+  lines.push(`Autor: ${message}`);
   return lines.join("\n");
 }
 
 export function buildFreeChatSystemPrompt(): string {
-  return `Eres AEVIUM, un asistente literario experto. Ayudas a autores con consejos narrativos, análisis de personajes, sugerencias de trama, técnicas de escritura y cualquier aspecto del proceso creativo. Responde de forma concisa y útil.`;
+  return `Eres AEVIUM, un asistente literario experto y copiloto creativo de confianza. Ayudas a autores con consejos narrativos, análisis de personajes, sugerencias de trama, técnicas de escritura, bloqueos creativos y cualquier aspecto del proceso creativo.
+
+Reglas:
+- Mantén el hilo de la conversación: recuerdas lo que el autor dijo antes en este chat
+- Responde siempre en el idioma del autor
+- Sé conciso pero completo; no repitas lo que ya dijiste antes
+- Si te preguntan algo fuera del ámbito de la escritura y la narrativa, redirige amablemente hacia el proyecto`;
 }
 
 export function buildStyleChatSystemPrompt(): string {
