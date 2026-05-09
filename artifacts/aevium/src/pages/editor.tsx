@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef } from "react";
+import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { Link } from "wouter";
 import { useParams } from "wouter";
 import { useGetProject, getGetProjectQueryKey, useListScenes, getListScenesQueryKey } from "@workspace/api-client-react";
@@ -33,6 +33,33 @@ export default function Editor() {
   const [aiTabTrigger, setAiTabTrigger] = useState(0);
   const insertTextFnRef = useRef<((text: string) => void) | null>(null);
   const replaceTextFnRef = useRef<((text: string) => void) | null>(null);
+
+  const [leftWidth, setLeftWidth] = useState(240);
+  const [rightWidth, setRightWidth] = useState(288);
+  const dragRef = useRef<{ side: "left" | "right"; startX: number; startW: number } | null>(null);
+
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      if (!dragRef.current) return;
+      const dx = e.clientX - dragRef.current.startX;
+      if (dragRef.current.side === "left") {
+        setLeftWidth(Math.min(480, Math.max(160, dragRef.current.startW + dx)));
+      } else {
+        setRightWidth(Math.min(520, Math.max(200, dragRef.current.startW - dx)));
+      }
+    };
+    const onUp = () => { dragRef.current = null; document.body.style.cursor = ""; document.body.style.userSelect = ""; };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+    return () => { document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); };
+  }, []);
+
+  const startDrag = useCallback((side: "left" | "right", e: React.MouseEvent) => {
+    e.preventDefault();
+    dragRef.current = { side, startX: e.clientX, startW: side === "left" ? leftWidth : rightWidth };
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+  }, [leftWidth, rightWidth]);
 
   const { data: project, isLoading: projectLoading } = useGetProject(id, {
     query: { enabled: !!id, queryKey: getGetProjectQueryKey(id) }
@@ -113,7 +140,7 @@ export default function Editor() {
 
       {/* Left panel */}
       {leftOpen ? (
-        <div className="w-60 shrink-0 border-r border-border flex flex-col bg-card/50" data-testid="panel-structure">
+        <div className="shrink-0 flex flex-col bg-card/50" style={{ width: leftWidth }} data-testid="panel-structure">
           <div className="h-11 border-b flex items-center justify-between px-3 shrink-0 gap-2">
             <span
               className="font-semibold text-sm truncate text-foreground"
@@ -174,6 +201,15 @@ export default function Editor() {
             <PanelLeft className="w-3.5 h-3.5" />
           </Button>
         </div>
+      )}
+
+      {/* Left resize handle */}
+      {leftOpen && (
+        <div
+          className="w-px shrink-0 cursor-col-resize bg-border hover:bg-primary/60 active:bg-primary transition-colors z-10"
+          onMouseDown={(e) => startDrag("left", e)}
+          data-testid="resize-handle-left"
+        />
       )}
 
       {/* Center panel */}
@@ -297,9 +333,18 @@ export default function Editor() {
         </div>
       </div>
 
+      {/* Right resize handle */}
+      {rightOpen && (
+        <div
+          className="w-px shrink-0 cursor-col-resize bg-border hover:bg-primary/60 active:bg-primary transition-colors z-10"
+          onMouseDown={(e) => startDrag("right", e)}
+          data-testid="resize-handle-right"
+        />
+      )}
+
       {/* Right panel */}
       {rightOpen ? (
-        <div className="w-72 shrink-0 border-l border-border flex flex-col bg-card/50" data-testid="panel-right">
+        <div className="shrink-0 flex flex-col bg-card/50" style={{ width: rightWidth }} data-testid="panel-right">
           <div className="h-11 border-b flex items-center justify-end px-3 shrink-0">
             <Button
               variant="ghost"
