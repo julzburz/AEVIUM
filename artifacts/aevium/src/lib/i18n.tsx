@@ -17,7 +17,14 @@ type I18nContextType = {
   setLang: (lang: Language) => void;
 };
 
-const I18nContext = createContext<I18nContextType | null>(null);
+const CTX_KEY = '__aevium_i18n_ctx__';
+type GlobalWithCtx = typeof globalThis & { [CTX_KEY]?: React.Context<I18nContextType | null> };
+
+const g = globalThis as GlobalWithCtx;
+if (!g[CTX_KEY]) {
+  g[CTX_KEY] = createContext<I18nContextType | null>(null);
+}
+const I18nContext = g[CTX_KEY] as React.Context<I18nContextType | null>;
 
 export function I18nProvider({ children }: { children: React.ReactNode }) {
   const [lang, setLangState] = useState<Language>(() => {
