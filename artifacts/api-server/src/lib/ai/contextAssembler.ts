@@ -12,13 +12,58 @@ import {
 import { eq, and, asc } from "drizzle-orm";
 import type { NarrativeContext } from "./types.js";
 
+/**
+ * Verifies that the given sceneId belongs to chapterId AND chapterId belongs to projectId
+ * via the book chain. Returns true if ownership is valid.
+ */
+export async function verifySceneOwnership(
+  sceneId: number,
+  chapterId: number,
+  projectId: number
+): Promise<boolean> {
+  const [row] = await db
+    .select({ sceneId: scenesTable.id })
+    .from(scenesTable)
+    .innerJoin(chaptersTable, eq(scenesTable.chapterId, chaptersTable.id))
+    .innerJoin(booksTable, eq(chaptersTable.bookId, booksTable.id))
+    .where(
+      and(
+        eq(scenesTable.id, sceneId),
+        eq(scenesTable.chapterId, chapterId),
+        eq(chaptersTable.id, chapterId),
+        eq(booksTable.projectId, projectId)
+      )
+    )
+    .limit(1);
+  return !!row;
+}
+
+/**
+ * Verifies that chapterId belongs to projectId via the book chain.
+ */
+export async function verifyChapterOwnership(
+  chapterId: number,
+  projectId: number
+): Promise<boolean> {
+  const [row] = await db
+    .select({ chapterId: chaptersTable.id })
+    .from(chaptersTable)
+    .innerJoin(booksTable, eq(chaptersTable.bookId, booksTable.id))
+    .where(and(eq(chaptersTable.id, chapterId), eq(booksTable.projectId, projectId)))
+    .limit(1);
+  return !!row;
+}
+
 export async function assembleContext(
   sceneId: number,
   chapterId: number,
   projectId: number
 ): Promise<NarrativeContext> {
   const [scene, chapter, characters, locations, memoryItems, styleGuide] = await Promise.all([
-    db.select().from(scenesTable).where(eq(scenesTable.id, sceneId)).limit(1),
+    // Verify scene belongs to chapter as part of the query
+    db.select().from(scenesTable)
+      .where(and(eq(scenesTable.id, sceneId), eq(scenesTable.chapterId, chapterId)))
+      .limit(1),
     db
       .select({
         id: chaptersTable.id,
@@ -27,7 +72,8 @@ export async function assembleContext(
         position: chaptersTable.position,
       })
       .from(chaptersTable)
-      .where(eq(chaptersTable.id, chapterId))
+      .innerJoin(booksTable, eq(chaptersTable.bookId, booksTable.id))
+      .where(and(eq(chaptersTable.id, chapterId), eq(booksTable.projectId, projectId)))
       .limit(1),
     db
       .select({ name: charactersTable.name, role: charactersTable.role, description: charactersTable.physicalDescription })

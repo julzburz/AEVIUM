@@ -1,8 +1,12 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 import { customFetch } from "@workspace/api-client-react";
-import { Bot, Send, RotateCcw, RefreshCw, Zap, CheckCircle2, XCircle, ChevronDown, ChevronUp, Loader2, Wand2, MessageCircle, BookMarked, AlertTriangle, Edit2, Check } from "lucide-react";
+import {
+  Bot, Send, RotateCcw, RefreshCw, Zap, CheckCircle2, XCircle, ChevronDown, ChevronUp,
+  Loader2, Wand2, MessageCircle, BookMarked, AlertTriangle, Edit2, Check, Eye, EyeOff,
+  Clock, Layers,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -37,6 +41,8 @@ interface GenerationResult {
   text: string;
   contextSummary?: string;
   sceneVersionId?: number | null;
+  originalText?: string;
+  isRewrite?: boolean;
 }
 
 interface ContradictionItem {
@@ -56,6 +62,16 @@ interface CoherenceIssue {
   suggestion?: string;
 }
 
+interface ContextSummary {
+  characterCount: number;
+  memoryCount: number;
+  hasPreviousScene: boolean;
+  hasStyleGuide: boolean;
+  projectName?: string;
+  chapterTitle?: string;
+  sceneTitle?: string;
+}
+
 type AiMode = "actions" | "chat";
 
 export function AiPanel({ projectId, sceneId, chapterId, onInsertText, selectedText }: AiPanelProps) {
@@ -66,7 +82,10 @@ export function AiPanel({ projectId, sceneId, chapterId, onInsertText, selectedT
   const [loading, setLoading] = useState<string | null>(null);
 
   const [generation, setGeneration] = useState<GenerationResult | null>(null);
+  const [editedProposal, setEditedProposal] = useState<string | null>(null);
+  const [editingProposal, setEditingProposal] = useState(false);
   const [coherenceResult, setCoherenceResult] = useState<{ issues: CoherenceIssue[]; summary: string } | null>(null);
+  const [dismissedIssues, setDismissedIssues] = useState<Set<number>>(new Set());
   const [memorySuggestions, setMemorySuggestions] = useState<MemorySuggestion[]>([]);
   const [editingMemory, setEditingMemory] = useState<EditingMemory | null>(null);
   const [instruction, setInstruction] = useState("");
@@ -75,8 +94,28 @@ export function AiPanel({ projectId, sceneId, chapterId, onInsertText, selectedT
   const [showMemSuggestions, setShowMemSuggestions] = useState(false);
   const [contradictionAlert, setContradictionAlert] = useState<ContradictionResult | null>(null);
   const [pendingAction, setPendingAction] = useState<"continue" | "rewrite" | null>(null);
+  const [contextSummary, setContextSummary] = useState<ContextSummary | null>(null);
+  const [showContext, setShowContext] = useState(false);
 
   const hasScene = !!sceneId && !!chapterId;
+
+  useEffect(() => {
+    if (!hasScene) return;
+    loadContextSummary();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sceneId, chapterId, projectId]);
+
+  async function loadContextSummary() {
+    try {
+      const summary = await customFetch<ContextSummary>(`/api/ai/context-summary`, {
+        method: "POST",
+        body: JSON.stringify({ projectId, sceneId, chapterId }),
+      });
+      setContextSummary(summary);
+    } catch {
+      // non-critical
+    }
+  }
 
   async function checkContradiction(): Promise<ContradictionResult | null> {
     if (!instruction.trim()) return null;
@@ -107,13 +146,15 @@ export function AiPanel({ projectId, sceneId, chapterId, onInsertText, selectedT
 
     setLoading("continue");
     setGeneration(null);
+    setEditedProposal(null);
+    setEditingProposal(false);
     setMemorySuggestions([]);
     try {
       const resp = await customFetch<GenerationResult>(`/api/ai/continue-scene`, {
         method: "POST",
         body: JSON.stringify({ sceneId, chapterId, projectId, instruction: instruction || null }),
       });
-      setGeneration(resp);
+      setGeneration({ ...resp, isRewrite: false });
       setInstruction("");
       if (resp.text) extractMemorySuggestions(resp.text);
     } catch (e) {
@@ -139,13 +180,16 @@ export function AiPanel({ projectId, sceneId, chapterId, onInsertText, selectedT
 
     setLoading("rewrite");
     setGeneration(null);
+    setEditedProposal(null);
+    setEditingProposal(false);
     try {
       const resp = await customFetch<GenerationResult>(`/api/ai/rewrite-selection`, {
         method: "POST",
         body: JSON.stringify({ sceneId, chapterId, projectId, selectedText, instruction }),
       });
-      setGeneration(resp);
+      setGeneration({ ...resp, originalText: selectedText, isRewrite: true });
       setInstruction("");
+      if (resp.text) extractMemorySuggestions(resp.text);
     } catch (e) {
       toast({ variant: "destructive", title: "Error", description: String(e) });
     } finally {
@@ -162,6 +206,7 @@ export function AiPanel({ projectId, sceneId, chapterId, onInsertText, selectedT
 
   async function handleAcceptGeneration() {
     if (!generation) return;
+    const finalText = editedProposal ?? generation.text;
     if (generation.sceneVersionId && chapterId && sceneId) {
       try {
         await customFetch(`/api/chapters/${chapterId}/scenes/${sceneId}/versions/${generation.sceneVersionId}`, {
@@ -170,8 +215,10 @@ export function AiPanel({ projectId, sceneId, chapterId, onInsertText, selectedT
         });
       } catch { /* non-critical */ }
     }
-    onInsertText?.(generation.text);
+    onInsertText?.(finalText);
     setGeneration(null);
+    setEditedProposal(null);
+    setEditingProposal(false);
   }
 
   async function handleRejectGeneration() {
@@ -185,12 +232,15 @@ export function AiPanel({ projectId, sceneId, chapterId, onInsertText, selectedT
       } catch { /* non-critical */ }
     }
     setGeneration(null);
+    setEditedProposal(null);
+    setEditingProposal(false);
   }
 
   async function handleReviewCoherence() {
     if (!hasScene) return;
     setLoading("coherence");
     setCoherenceResult(null);
+    setDismissedIssues(new Set());
     try {
       const resp = await customFetch<{ issues: CoherenceIssue[]; summary: string }>(`/api/ai/review-coherence`, {
         method: "POST",
@@ -226,7 +276,7 @@ export function AiPanel({ projectId, sceneId, chapterId, onInsertText, selectedT
       await customFetch(`/api/projects/${projectId}/memory`, {
         method: "POST",
         body: JSON.stringify({
-          type: editingMemory ? suggestion.type : suggestion.type,
+          type: suggestion.type,
           title,
           content,
           status: "canonical",
@@ -266,6 +316,8 @@ export function AiPanel({ projectId, sceneId, chapterId, onInsertText, selectedT
       setLoading(null);
     }
   }
+
+  const activeIssues = coherenceResult?.issues.filter((_, i) => !dismissedIssues.has(i)) ?? [];
 
   return (
     <div className="flex flex-col h-full gap-2">
@@ -323,6 +375,31 @@ export function AiPanel({ projectId, sceneId, chapterId, onInsertText, selectedT
 
       {hasScene && mode === "actions" && (
         <div className="flex flex-col gap-3 flex-1 min-h-0">
+          {/* Context preview (collapsible) */}
+          {contextSummary && (
+            <Collapsible open={showContext} onOpenChange={setShowContext}>
+              <CollapsibleTrigger asChild>
+                <button className="flex items-center gap-1.5 w-full text-[10px] text-muted-foreground hover:text-foreground transition-colors">
+                  {showContext ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                  <span className="flex-1 text-left">
+                    {t("ai.context")}: {contextSummary.characterCount} {t("ai.characters").toLowerCase()}, {contextSummary.memoryCount} {t("ai.memoryItems")}
+                  </span>
+                  {showContext ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                </button>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="mt-1 rounded border bg-muted/30 p-2 text-[10px] space-y-1">
+                  {contextSummary.sceneTitle && <p><span className="text-muted-foreground">{t("editor.scenes")}:</span> {contextSummary.sceneTitle}</p>}
+                  {contextSummary.chapterTitle && <p><span className="text-muted-foreground">{t("editor.chapters")}:</span> {contextSummary.chapterTitle}</p>}
+                  <p><span className="text-muted-foreground">{t("ai.characters")}:</span> {contextSummary.characterCount}</p>
+                  <p><span className="text-muted-foreground">{t("ai.memoryItems")}:</span> {contextSummary.memoryCount}</p>
+                  {contextSummary.hasPreviousScene && <p className="flex items-center gap-1"><Clock className="w-2.5 h-2.5" /> {t("ai.hasPreviousScene")}</p>}
+                  {contextSummary.hasStyleGuide && <p className="flex items-center gap-1"><Layers className="w-2.5 h-2.5" /> {t("ai.hasStyleGuide")}</p>}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          )}
+
           {/* Instruction box */}
           <div className="shrink-0">
             <Textarea
@@ -377,22 +454,59 @@ export function AiPanel({ projectId, sceneId, chapterId, onInsertText, selectedT
                 <div className="border rounded-md p-2 flex flex-col gap-2">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-medium text-muted-foreground">{t("ai.generatedText")}</span>
+                    {!editingProposal && (
+                      <Button size="sm" variant="ghost" className="h-5 text-[9px] px-1.5" onClick={() => { setEditingProposal(true); setEditedProposal(generation.text); }}>
+                        <Edit2 className="w-2.5 h-2.5 mr-0.5" />{t("ai.edit")}
+                      </Button>
+                    )}
                   </div>
-                  <p className="text-xs leading-relaxed whitespace-pre-wrap text-foreground/90">{generation.text}</p>
+
+                  {/* Side-by-side for rewrites */}
+                  {generation.isRewrite && generation.originalText && (
+                    <div className="grid grid-cols-2 gap-2 text-[10px]">
+                      <div className="space-y-1">
+                        <p className="text-muted-foreground font-medium">{t("ai.original")}</p>
+                        <p className="leading-relaxed text-foreground/50 line-clamp-6 whitespace-pre-wrap">{generation.originalText}</p>
+                      </div>
+                      <div className="space-y-1 border-l pl-2">
+                        <p className="text-primary font-medium">{t("ai.proposed")}</p>
+                        {editingProposal ? (
+                          <Textarea
+                            value={editedProposal ?? generation.text}
+                            onChange={(e) => setEditedProposal(e.target.value)}
+                            className="text-[10px] min-h-[80px] resize-none"
+                          />
+                        ) : (
+                          <p className="leading-relaxed text-foreground/90 whitespace-pre-wrap">{generation.text}</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Continue-scene: single view */}
+                  {!generation.isRewrite && (
+                    editingProposal ? (
+                      <Textarea
+                        value={editedProposal ?? generation.text}
+                        onChange={(e) => setEditedProposal(e.target.value)}
+                        className="text-xs min-h-[80px] resize-none"
+                      />
+                    ) : (
+                      <p className="text-xs leading-relaxed whitespace-pre-wrap text-foreground/90">{generation.text}</p>
+                    )
+                  )}
+
+                  {editingProposal && (
+                    <Button size="sm" variant="ghost" className="h-6 text-[10px] self-end px-2" onClick={() => setEditingProposal(false)}>
+                      {t("ai.previewEdit")}
+                    </Button>
+                  )}
+
                   <div className="flex gap-1 mt-1">
-                    <Button
-                      size="sm"
-                      className="flex-1 h-7 text-xs"
-                      onClick={handleAcceptGeneration}
-                    >
+                    <Button size="sm" className="flex-1 h-7 text-xs" onClick={handleAcceptGeneration}>
                       <CheckCircle2 className="w-3 h-3 mr-1" />{t("ai.accept")}
                     </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="flex-1 h-7 text-xs text-muted-foreground"
-                      onClick={handleRejectGeneration}
-                    >
+                    <Button size="sm" variant="outline" className="flex-1 h-7 text-xs text-muted-foreground" onClick={handleRejectGeneration}>
                       <XCircle className="w-3 h-3 mr-1" />{t("ai.discard")}
                     </Button>
                   </div>
@@ -414,7 +528,6 @@ export function AiPanel({ projectId, sceneId, chapterId, onInsertText, selectedT
                       {memorySuggestions.map((s, i) => (
                         <div key={i} className="border rounded-md p-2 flex flex-col gap-1">
                           {editingMemory?.index === i ? (
-                            /* Inline edit form */
                             <div className="flex flex-col gap-1.5">
                               <Input
                                 value={editingMemory.title}
@@ -429,25 +542,15 @@ export function AiPanel({ projectId, sceneId, chapterId, onInsertText, selectedT
                                 rows={2}
                               />
                               <div className="flex gap-1">
-                                <Button
-                                  size="sm"
-                                  className="flex-1 h-5 text-[9px] px-1.5"
-                                  onClick={() => handleSaveMemory(i, editingMemory.title, editingMemory.content)}
-                                >
+                                <Button size="sm" className="flex-1 h-5 text-[9px] px-1.5" onClick={() => handleSaveMemory(i, editingMemory.title, editingMemory.content)}>
                                   <Check className="w-2.5 h-2.5 mr-0.5" />{t("ai.save")}
                                 </Button>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-5 text-[9px] px-1.5"
-                                  onClick={() => setEditingMemory(null)}
-                                >
+                                <Button size="sm" variant="ghost" className="h-5 text-[9px] px-1.5" onClick={() => setEditingMemory(null)}>
                                   {t("form.cancel")}
                                 </Button>
                               </div>
                             </div>
                           ) : (
-                            /* Display mode */
                             <>
                               <div className="flex items-center justify-between">
                                 <Badge variant="outline" className="text-[9px] h-4">{s.type}</Badge>
@@ -456,27 +559,13 @@ export function AiPanel({ projectId, sceneId, chapterId, onInsertText, selectedT
                               <p className="text-[11px] font-medium">{s.title}</p>
                               <p className="text-[10px] text-muted-foreground line-clamp-2">{s.content}</p>
                               <div className="flex gap-1 mt-1">
-                                <Button
-                                  size="sm"
-                                  className="h-5 text-[9px] px-1.5"
-                                  onClick={() => handleSaveMemory(i, s.title, s.content)}
-                                >
+                                <Button size="sm" className="h-5 text-[9px] px-1.5" onClick={() => handleSaveMemory(i, s.title, s.content)}>
                                   <CheckCircle2 className="w-2.5 h-2.5 mr-0.5" />{t("ai.save")}
                                 </Button>
-                                <Button
-                                  size="sm"
-                                  variant="secondary"
-                                  className="h-5 text-[9px] px-1.5"
-                                  onClick={() => setEditingMemory({ index: i, title: s.title, content: s.content })}
-                                >
+                                <Button size="sm" variant="secondary" className="h-5 text-[9px] px-1.5" onClick={() => setEditingMemory({ index: i, title: s.title, content: s.content })}>
                                   <Edit2 className="w-2.5 h-2.5 mr-0.5" />{t("ai.edit")}
                                 </Button>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-5 text-[9px] px-1.5"
-                                  onClick={() => setMemorySuggestions((p) => p.filter((_, j) => j !== i))}
-                                >
+                                <Button size="sm" variant="ghost" className="h-5 text-[9px] px-1.5" onClick={() => setMemorySuggestions((p) => p.filter((_, j) => j !== i))}>
                                   <XCircle className="w-2.5 h-2.5 mr-0.5" />{t("ai.ignore")}
                                 </Button>
                               </div>
@@ -499,15 +588,37 @@ export function AiPanel({ projectId, sceneId, chapterId, onInsertText, selectedT
                     </Button>
                   </div>
                   <p className="text-[11px] text-foreground/80">{coherenceResult.summary}</p>
-                  {coherenceResult.issues.length > 0 ? (
+                  {activeIssues.length > 0 ? (
                     <div className="flex flex-col gap-1.5">
-                      {coherenceResult.issues.map((issue, i) => (
-                        <div key={i} className="bg-destructive/10 rounded p-1.5">
-                          <p className="text-[10px] font-medium text-destructive">{issue.type}</p>
-                          <p className="text-[10px] text-foreground/70">{issue.description}</p>
-                          {issue.suggestion && <p className="text-[10px] text-primary mt-0.5">💡 {issue.suggestion}</p>}
-                        </div>
-                      ))}
+                      {coherenceResult.issues.map((issue, i) => {
+                        if (dismissedIssues.has(i)) return null;
+                        return (
+                          <div key={i} className="bg-destructive/10 rounded p-1.5">
+                            <p className="text-[10px] font-medium text-destructive">{issue.type}</p>
+                            <p className="text-[10px] text-foreground/70">{issue.description}</p>
+                            {issue.suggestion && <p className="text-[10px] text-primary mt-0.5">→ {issue.suggestion}</p>}
+                            <div className="flex gap-1 mt-1.5">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-5 text-[9px] px-1.5 text-muted-foreground"
+                                onClick={() => setDismissedIssues((s) => new Set([...s, i]))}
+                              >
+                                <XCircle className="w-2.5 h-2.5 mr-0.5" />{t("ai.ignore")}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-5 text-[9px] px-1.5 text-amber-600 dark:text-amber-400"
+                                onClick={() => setDismissedIssues((s) => new Set([...s, i]))}
+                                title={t("ai.postpone")}
+                              >
+                                <Clock className="w-2.5 h-2.5 mr-0.5" />{t("ai.postpone")}
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   ) : (
                     <div className="flex items-center gap-1 text-[10px] text-green-600 dark:text-green-400">
@@ -553,17 +664,12 @@ export function AiPanel({ projectId, sceneId, chapterId, onInsertText, selectedT
               value={chatMessage}
               onChange={(e) => setChatMessage(e.target.value)}
               placeholder={t("ai.chatInput")}
-              className="text-xs resize-none min-h-[36px] max-h-[80px]"
+              className="text-xs resize-none min-h-[52px]"
               rows={2}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleChat();
-                }
-              }}
+              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleChat(); } }}
             />
-            <Button size="sm" className="shrink-0 h-auto" onClick={handleChat} disabled={!!loading || !chatMessage.trim()}>
-              <Send className="w-3 h-3" />
+            <Button size="sm" className="shrink-0 h-auto px-2" onClick={handleChat} disabled={!!loading || !chatMessage.trim()}>
+              {loading === "chat" ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
             </Button>
           </div>
         </div>

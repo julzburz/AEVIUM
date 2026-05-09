@@ -117,11 +117,28 @@ export function AiSettingsSection({ projectId }: AiSettingsSectionProps) {
   async function handleSetDefault(id: number) {
     if (!projectId) return;
     try {
-      await customFetch(`/api/projects/${projectId}/ai-credentials`, {
-        method: "POST",
-        body: JSON.stringify({ provider: "gemini", isDefault: true }),
+      await customFetch(`/api/projects/${projectId}/ai-credentials/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ isDefault: true }),
       });
       await loadCredentials();
+    } catch (e) {
+      toast({ variant: "destructive", title: "Error", description: String(e) });
+    }
+  }
+
+  async function handleTestCredential(id: number) {
+    if (!projectId) return;
+    try {
+      const resp = await customFetch<{ ok: boolean; message: string }>(`/api/projects/${projectId}/ai-credentials/test`, {
+        method: "POST",
+        body: JSON.stringify({ provider: "gemini", credentialId: id }),
+      });
+      toast({
+        title: resp.ok ? t("settings.ai.testOk") : t("settings.ai.testFail"),
+        description: resp.message,
+        variant: resp.ok ? "default" : "destructive",
+      });
     } catch (e) {
       toast({ variant: "destructive", title: "Error", description: String(e) });
     }
@@ -265,6 +282,15 @@ export function AiSettingsSection({ projectId }: AiSettingsSectionProps) {
                     </div>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 text-[10px] px-1.5 text-muted-foreground"
+                      onClick={() => handleTestCredential(cred.id)}
+                      title="Test connection"
+                    >
+                      <CheckCircle2 className="w-2.5 h-2.5 mr-0.5" />Test
+                    </Button>
                     {!cred.isDefault && (
                       <Button
                         size="sm"

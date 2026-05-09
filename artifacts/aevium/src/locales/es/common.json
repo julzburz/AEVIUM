@@ -303,5 +303,14 @@
   "settings.ai.saving": "Guardando...",
   "settings.ai.deleteConfirm": "¿Eliminar esta clave API?",
   "settings.ai.noCredentialsProject": "Sin claves API personalizadas para este proyecto.",
-  "settings.ai.addSuccess": "Clave añadida correctamente"
+  "settings.ai.addSuccess": "Clave añadida correctamente",
+  "ai.context": "Contexto",
+  "ai.characters": "Personajes",
+  "ai.memoryItems": "Ítems de memoria",
+  "ai.hasPreviousScene": "Escena anterior disponible",
+  "ai.hasStyleGuide": "Guía de estilo activa",
+  "ai.original": "Original",
+  "ai.proposed": "Propuesto",
+  "ai.previewEdit": "Vista previa",
+  "ai.postpone": "Aplazar"
 }

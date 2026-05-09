@@ -1,13 +1,23 @@
-import { ai } from "@workspace/integrations-gemini-ai";
+import { ai as replitAi, createGeminiClient } from "@workspace/integrations-gemini-ai";
 import type { AiProvider } from "./types.js";
 
-const MODEL = "gemini-2.5-flash";
+const DEFAULT_MODEL = "gemini-2.5-flash";
 const EMBED_MODEL = "text-embedding-004";
 
+type GenAIClient = typeof replitAi;
+
 export class GeminiProvider implements AiProvider {
+  private readonly client: GenAIClient;
+  private readonly model: string;
+
+  constructor(client: GenAIClient = replitAi, model: string = DEFAULT_MODEL) {
+    this.client = client;
+    this.model = model;
+  }
+
   async generateText(prompt: string, systemPrompt: string): Promise<string> {
-    const response = await ai.models.generateContent({
-      model: MODEL,
+    const response = await this.client.models.generateContent({
+      model: this.model,
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       config: {
         systemInstruction: systemPrompt,
@@ -19,8 +29,8 @@ export class GeminiProvider implements AiProvider {
   }
 
   async generateStructured<T>(prompt: string, systemPrompt: string): Promise<T> {
-    const response = await ai.models.generateContent({
-      model: MODEL,
+    const response = await this.client.models.generateContent({
+      model: this.model,
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       config: {
         systemInstruction: systemPrompt,
@@ -35,7 +45,7 @@ export class GeminiProvider implements AiProvider {
   }
 
   async embedText(text: string): Promise<number[]> {
-    const response = await ai.models.embedContent({
+    const response = await this.client.models.embedContent({
       model: EMBED_MODEL,
       contents: [{ role: "user", parts: [{ text: text.slice(0, 8192) }] }],
     });
@@ -45,9 +55,7 @@ export class GeminiProvider implements AiProvider {
   async validateConfig(): Promise<{ valid: boolean; error?: string }> {
     try {
       const ok = await this.testConnection();
-      return ok
-        ? { valid: true }
-        : { valid: false, error: "No se pudo conectar con Gemini" };
+      return ok ? { valid: true } : { valid: false, error: "No se pudo conectar con Gemini" };
     } catch (e) {
       return { valid: false, error: String(e) };
     }
@@ -55,8 +63,8 @@ export class GeminiProvider implements AiProvider {
 
   async testConnection(): Promise<boolean> {
     try {
-      const response = await ai.models.generateContent({
-        model: MODEL,
+      const response = await this.client.models.generateContent({
+        model: this.model,
         contents: [{ role: "user", parts: [{ text: "Say OK" }] }],
         config: { maxOutputTokens: 10 },
       });
@@ -68,3 +76,11 @@ export class GeminiProvider implements AiProvider {
 }
 
 export const geminiProvider = new GeminiProvider();
+
+/**
+ * Creates a GeminiProvider using a user-supplied API key (bypasses Replit proxy).
+ */
+export function createCustomGeminiProvider(apiKey: string, model?: string): GeminiProvider {
+  const customClient = createGeminiClient(apiKey);
+  return new GeminiProvider(customClient as GenAIClient, model ?? DEFAULT_MODEL);
+}

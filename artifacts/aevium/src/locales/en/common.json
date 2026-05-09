@@ -303,5 +303,14 @@
   "settings.ai.saving": "Saving...",
   "settings.ai.deleteConfirm": "Delete this API key?",
   "settings.ai.noCredentialsProject": "No custom API keys for this project.",
-  "settings.ai.addSuccess": "Key added successfully"
+  "settings.ai.addSuccess": "Key added successfully",
+  "ai.context": "Context",
+  "ai.characters": "Characters",
+  "ai.memoryItems": "Memory items",
+  "ai.hasPreviousScene": "Previous scene available",
+  "ai.hasStyleGuide": "Style guide active",
+  "ai.original": "Original",
+  "ai.proposed": "Proposed",
+  "ai.previewEdit": "Preview",
+  "ai.postpone": "Postpone"
 }
