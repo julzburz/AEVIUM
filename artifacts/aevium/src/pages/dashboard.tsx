@@ -297,8 +297,9 @@ export default function Dashboard() {
           {filteredProjects.map((project) => (
             <Card
               key={project.id}
-              className="transition-colors flex flex-col hover:border-primary/50"
+              className="transition-colors flex flex-col hover:border-primary/50 cursor-pointer"
               data-testid={`card-project-${project.id}`}
+              onClick={() => setLocation(`/projects/${project.id}`)}
             >
               <CardHeader className="pb-3">
                 <div className="flex justify-between items-start gap-2">
