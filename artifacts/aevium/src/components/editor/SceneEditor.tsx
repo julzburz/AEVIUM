@@ -285,7 +285,7 @@ export function SceneEditor({ sceneId, chapterId, projectId, onWordCountChange, 
     },
     editorProps: {
       attributes: {
-        class: "outline-none min-h-[400px] font-serif text-base leading-relaxed text-foreground prose dark:prose-invert max-w-none",
+        class: "outline-none min-h-[400px] font-serif text-base leading-relaxed text-foreground prose dark:prose-invert max-w-none text-justify hyphens-auto",
         "data-testid": "tiptap-editor",
       },
     },

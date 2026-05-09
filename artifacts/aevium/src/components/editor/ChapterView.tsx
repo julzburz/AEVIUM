@@ -73,7 +73,7 @@ export function ChapterView({ chapterId, chapterTitle, onWordCountChange }: Chap
                   <span className="text-xs text-muted-foreground/60">{countWords(scene.content ?? "").toLocaleString()} {t('editor.words')}</span>
                 </div>
                 <div
-                  className="font-serif text-base leading-relaxed text-foreground prose dark:prose-invert max-w-none"
+                  className="font-serif text-base leading-relaxed text-foreground prose dark:prose-invert max-w-none text-justify hyphens-auto"
                   dangerouslySetInnerHTML={{ __html: safeHtml(scene.content ?? "") }}
                 />
                 {idx < scenes.length - 1 && (

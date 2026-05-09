@@ -143,3 +143,11 @@
     @apply font-sans antialiased bg-background text-foreground;
   }
 }
+
+@layer components {
+  .ProseMirror p,
+  .prose p {
+    text-align: justify;
+    hyphens: auto;
+  }
+}
