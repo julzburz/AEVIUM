@@ -16,9 +16,11 @@ interface RightPanelProps {
   chapterId?: number;
   onInsertText?: (text: string) => void;
   selectedText?: string;
+  analyzeText?: string | null;
+  onAnalyzeConsumed?: () => void;
 }
 
-export function RightPanel({ projectId, sceneId, chapterId, onInsertText, selectedText }: RightPanelProps) {
+export function RightPanel({ projectId, sceneId, chapterId, onInsertText, selectedText, analyzeText, onAnalyzeConsumed }: RightPanelProps) {
   const { t } = useI18n();
   const [tab, setTab] = useState<RightTab>("memory");
 
@@ -68,7 +70,7 @@ export function RightPanel({ projectId, sceneId, chapterId, onInsertText, select
           <ContinuityPanel projectId={projectId} sceneId={sceneId} />
         )}
         {tab === "timeline" && <TimelinePanel projectId={projectId} />}
-        {tab === "style" && <StylePanel projectId={projectId} />}
+        {tab === "style" && <StylePanel projectId={projectId} analyzeText={tab === "style" ? analyzeText : null} />}
         {tab === "notes" && <NotesPanel projectId={projectId} />}
       </div>
     </div>

@@ -86,7 +86,7 @@ interface ImportDialogProps {
   projectId: number;
   bookId?: number | null;
   open: boolean;
-  onClose: () => void;
+  onClose: (rawText?: string) => void;
 }
 
 export function ImportDialog({ projectId, bookId: initialBookId, open, onClose }: ImportDialogProps) {
@@ -95,6 +95,7 @@ export function ImportDialog({ projectId, bookId: initialBookId, open, onClose }
   const queryClient = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const [parsed, setParsed] = useState<ParsedChapter[]>([]);
+  const [rawText, setRawText] = useState("");
   const [fileName, setFileName] = useState("");
   const [importing, setImporting] = useState(false);
   const [selectedBookId, setSelectedBookId] = useState<number | null>(initialBookId ?? null);
@@ -113,6 +114,7 @@ export function ImportDialog({ projectId, bookId: initialBookId, open, onClose }
     const reader = new FileReader();
     reader.onload = (e) => {
       const text = (e.target?.result as string) ?? "";
+      setRawText(text);
       const result = parseFile(text);
       setParsed(result);
     };
@@ -151,9 +153,11 @@ export function ImportDialog({ projectId, bookId: initialBookId, open, onClose }
         }
       }
       toast({ title: t('editor.import.success') });
+      const textToAnalyze = rawText;
       setParsed([]);
       setFileName("");
-      onClose();
+      setRawText("");
+      onClose(textToAnalyze);
     } catch {
       toast({ title: t('editor.import.error'), variant: "destructive" });
     } finally {
@@ -164,7 +168,7 @@ export function ImportDialog({ projectId, bookId: initialBookId, open, onClose }
   const totalScenes = parsed.reduce((a, c) => a + c.scenes.length, 0);
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) { setParsed([]); setFileName(""); onClose(); } }}>
+    <Dialog open={open} onOpenChange={(o) => { if (!o) { setParsed([]); setFileName(""); setRawText(""); onClose(); } }}>
       <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>{t('editor.import.title')}</DialogTitle>
@@ -244,7 +248,7 @@ export function ImportDialog({ projectId, bookId: initialBookId, open, onClose }
         )}
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => { setParsed([]); setFileName(""); onClose(); }}>{t('form.cancel')}</Button>
+          <Button variant="outline" onClick={() => { setParsed([]); setFileName(""); setRawText(""); onClose(); }}>{t('form.cancel')}</Button>
           <Button
             onClick={handleImport}
             disabled={parsed.length === 0 || importing || !effectiveBookId}

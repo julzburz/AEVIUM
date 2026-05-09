@@ -93,3 +93,49 @@ export function buildFreeChatPrompt(ctx: NarrativeContext, message: string): str
 export function buildFreeChatSystemPrompt(): string {
   return `Eres AEVIUM, un asistente literario experto. Ayudas a autores con consejos narrativos, análisis de personajes, sugerencias de trama, técnicas de escritura y cualquier aspecto del proceso creativo. Responde de forma concisa y útil.`;
 }
+
+export function buildStyleChatSystemPrompt(): string {
+  return `Eres AEVIUM, un consultor de estilo narrativo amigable. Ayudas a escritores a configurar su guía de estilo de escritura de forma conversacional.
+
+Tu objetivo es hacer preguntas naturales y sencillas para entender:
+1. Quién narra la historia (perspectiva narrativa)
+2. En qué tiempo verbal está escrita
+3. El tono y ritmo general
+4. Preferencias específicas de estilo (palabras, diálogos, etc.)
+
+Reglas importantes:
+- Haz UNA sola pregunta a la vez, de forma natural y sin tecnicismos
+- Si el escritor no sabe responder algo, sugiere un valor por defecto razonable y continúa
+- Responde SIEMPRE en el mismo idioma que el escritor usa contigo
+- Sé cálido, alentador y breve en tus respuestas
+- Cuando hayas hecho al menos 3 intercambios con el escritor Y tengas suficiente información, escribe primero un resumen amigable de lo detectado y luego añade este bloque exacto al final:
+
+###PARAMS###
+{"narrator":"VALOR","tense":"VALOR","povType":"VALOR","pacing":"VALOR","tone":"VALOR","sensorDetailLevel":"VALOR","violenceLevel":"VALOR","introspectionLevel":"VALOR","forbiddenWords":"VALOR","frequentWords":"VALOR","dialogueRules":"VALOR","povRules":"VALOR"}
+###END_PARAMS###
+
+Valores válidos para los campos enum:
+- narrator: "first_person" | "third_limited" | "third_omniscient" | "second_person" | null
+- tense: "past" | "present" | null
+- povType: "single" | "multiple" | null  
+- pacing: "slow" | "medium" | "fast" | null
+- El resto son strings libres o null si no se mencionó nada relevante
+
+Si un campo no fue mencionado, usa null. No inventes información que el escritor no haya dado.`;
+}
+
+export function buildStyleChatPrompt(messages: { role: string; content: string }[]): string {
+  return messages.map(m => `${m.role === "user" ? "Escritor" : "AEVIUM"}: ${m.content}`).join("\n\n");
+}
+
+export function buildStyleAnalyzePrompt(text: string): string {
+  return [
+    "--- FRAGMENTO DEL TEXTO A ANALIZAR ---",
+    text.slice(0, 3000),
+    "",
+    "Analiza el estilo narrativo de este texto y extrae los parámetros de estilo. Responde EXCLUSIVAMENTE en JSON con este formato:",
+    '{"narrator":"first_person|third_limited|third_omniscient|second_person|null","tense":"past|present|null","povType":"single|multiple|null","pacing":"slow|medium|fast|null","tone":"descripción del tono","sensorDetailLevel":"descripción","violenceLevel":"descripción","introspectionLevel":"descripción","forbiddenWords":null,"frequentWords":"palabras o recursos frecuentes detectados","dialogueRules":"descripción del estilo de diálogo si hay","povRules":null,"summary":"resumen en 2-3 frases del estilo detectado"}',
+    "",
+    "Basa tu análisis únicamente en lo que el texto muestra. Si algo no está claro, usa null.",
+  ].join("\n");
+}

@@ -28,6 +28,7 @@ export default function Editor() {
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [chapterView, setChapterView] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [pendingAnalyzeText, setPendingAnalyzeText] = useState<string | null>(null);
 
   const { data: project, isLoading: projectLoading } = useGetProject(id, {
     query: { enabled: !!id, queryKey: getGetProjectQueryKey(id) }
@@ -289,6 +290,8 @@ export default function Editor() {
               projectId={id}
               sceneId={selectedSceneId ?? undefined}
               chapterId={selectedChapterId ?? undefined}
+              analyzeText={pendingAnalyzeText}
+              onAnalyzeConsumed={() => setPendingAnalyzeText(null)}
             />
           </div>
         </div>
@@ -311,7 +314,12 @@ export default function Editor() {
         projectId={id}
         bookId={selectedBookId}
         open={showImport}
-        onClose={() => setShowImport(false)}
+        onClose={(rawText) => {
+          setShowImport(false);
+          if (rawText && rawText.length > 50) {
+            setPendingAnalyzeText(rawText);
+          }
+        }}
       />
     </div>
   );
