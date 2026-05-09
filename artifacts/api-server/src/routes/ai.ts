@@ -415,18 +415,48 @@ router.post("/ai/import-structure", requireAuth, async (req, res): Promise<void>
 
   const raw = await provider.generateText(prompt, "Eres un asistente de edición literaria. Devuelve únicamente JSON válido, sin markdown ni texto adicional.");
 
-  // Strip markdown fences if present
-  const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
-
-  let parsed: { chapterTitle: string; scenes: { title: string; content: string }[] };
+  // Extract JSON — try direct parse first, then regex fallback
+  let aiResult: { chapterTitle: string; sceneTitles?: string[] };
   try {
-    parsed = JSON.parse(cleaned);
+    const cleaned = raw.replace(/^```(?:json)?\s*/im, "").replace(/```\s*$/m, "").trim();
+    aiResult = JSON.parse(cleaned);
   } catch {
-    res.status(422).json({ error: "AI did not return valid JSON", raw });
-    return;
+    const match = raw.match(/\{[\s\S]*\}/);
+    if (!match) {
+      res.status(422).json({ error: "AI did not return valid JSON", raw: raw.slice(0, 500) });
+      return;
+    }
+    try {
+      aiResult = JSON.parse(match[0]);
+    } catch {
+      res.status(422).json({ error: "AI did not return valid JSON", raw: raw.slice(0, 500) });
+      return;
+    }
   }
 
-  res.json(parsed);
+  // Split the FULL original text into N scenes based on the titles we got
+  const sceneTitles: string[] = aiResult.sceneTitles?.length ? aiResult.sceneTitles : ["Escena 1"];
+  const fullText = body.data.text;
+  const paragraphs = fullText.split(/\n{2,}/).map(p => p.trim()).filter(Boolean);
+
+  const scenes: { title: string; content: string }[] = [];
+  const n = sceneTitles.length;
+  const chunkSize = Math.ceil(paragraphs.length / n);
+
+  for (let i = 0; i < n; i++) {
+    const start = i * chunkSize;
+    const chunk = paragraphs.slice(start, start + chunkSize).join("\n\n");
+    if (chunk.trim()) {
+      scenes.push({ title: sceneTitles[i], content: chunk });
+    }
+  }
+
+  // Safety: if splitting produced nothing, put everything in one scene
+  if (scenes.length === 0) {
+    scenes.push({ title: sceneTitles[0] ?? "Escena 1", content: fullText });
+  }
+
+  res.json({ chapterTitle: aiResult.chapterTitle, scenes });
 });
 
 router.post("/ai/test-builtin", requireAuth, async (_req, res): Promise<void> => {

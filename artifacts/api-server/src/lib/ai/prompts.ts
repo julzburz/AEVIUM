@@ -147,21 +147,20 @@ export function buildStyleChatPrompt(messages: { role: string; content: string }
 }
 
 export function buildImportStructurePrompt(text: string, filename: string): string {
-  // Trim to a safe token window (~20k chars ≈ ~5k tokens)
-  const safeText = text.slice(0, 20000);
+  // Send only the first 8000 chars for structure detection — we only need titles, not full content
+  const preview = text.slice(0, 8000);
   return [
     `--- ARCHIVO: ${filename} ---`,
-    safeText,
+    preview,
     "",
-    "Eres un asistente de edición literaria. Analiza el texto anterior y devuelve EXCLUSIVAMENTE un JSON con la siguiente estructura:",
-    '{"chapterTitle":"...","scenes":[{"title":"...","content":"..."}]}',
+    "Analiza el fragmento anterior (puede ser el inicio de un capítulo más largo) y devuelve EXCLUSIVAMENTE este JSON:",
+    '{"chapterTitle":"...","sceneTitles":["Título escena 1","Título escena 2",...]}',
     "",
     "Reglas:",
-    "1. chapterTitle: el título del capítulo. Usa el primer encabezado (H1) o la primera línea si parece un título. Si no hay título claro, genera uno descriptivo de 3-6 palabras basado en el contenido.",
-    "2. scenes: divide el texto en escenas narrativas según cambios de lugar, tiempo o punto de vista. Si el texto no tiene divisiones claras, devuelve una sola escena con todo el contenido.",
-    "3. Para cada escena: title = nombre descriptivo de 2-5 palabras; content = el texto íntegro de la escena tal como aparece, sin modificarlo.",
-    "4. No inventes ni modifiques el contenido narrativo. Solo organiza y nombra.",
-    "5. Devuelve SOLO el JSON, sin markdown ni explicación adicional.",
+    "1. chapterTitle: el título del capítulo. Usa el primer encabezado o la primera línea si parece un título. Si no hay título claro, genera uno descriptivo de 3-6 palabras.",
+    "2. sceneTitles: lista de nombres descriptivos (2-5 palabras cada uno) para las escenas narrativas que detectes. Si no hay divisiones claras, devuelve una sola entrada.",
+    "3. NO incluyas el contenido del texto, solo los títulos.",
+    "4. Devuelve SOLO el JSON, sin markdown ni explicación adicional.",
   ].join("\n");
 }
 
