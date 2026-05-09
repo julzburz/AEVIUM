@@ -210,7 +210,7 @@ function ChapterRow({
   return (
     <div>
       <div
-        className="group flex items-center gap-1 px-2 py-1.5 rounded-md hover:bg-secondary/15 cursor-pointer select-none"
+        className="group flex items-center gap-1 px-2 py-1.5 rounded-md hover:bg-secondary/15 hover:text-secondary cursor-pointer select-none"
         onClick={() => setExpanded((v) => !v)}
         data-testid={`tree-chapter-${chapter.id}`}
       >
@@ -280,7 +280,7 @@ function ChapterRow({
               <div
                 key={scene.id}
                 className={`group flex items-center gap-1.5 px-2 py-1.5 rounded-md cursor-pointer select-none ${
-                  selectedSceneId === scene.id ? "bg-primary/10 text-primary" : "hover:bg-secondary/15 text-muted-foreground"
+                  selectedSceneId === scene.id ? "bg-primary/10 text-primary" : "hover:bg-secondary/15 hover:text-secondary text-muted-foreground"
                 }`}
                 onClick={() => onSelectScene(scene.id, chapter.id, book.title, chapter.title, scene.title, book.id)}
                 data-testid={`tree-scene-${scene.id}`}
@@ -486,7 +486,7 @@ function BookRow({
   return (
     <div>
       <div
-        className="group flex items-center gap-1 px-2 py-1.5 rounded-md hover:bg-secondary/15 cursor-pointer select-none"
+        className="group flex items-center gap-1 px-2 py-1.5 rounded-md hover:bg-secondary/15 hover:text-secondary cursor-pointer select-none"
         onClick={() => setExpanded((v) => !v)}
         data-testid={`tree-book-${book.id}`}
       >
