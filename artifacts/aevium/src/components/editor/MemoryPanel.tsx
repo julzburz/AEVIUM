@@ -381,35 +381,33 @@ function MemoryItemsTab({ projectId }: { projectId: number }) {
         <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={openNew} data-testid="button-new-memory-item"><Plus className="w-3 h-3" />{t('editor.newMemoryItem')}</Button>
       </div>
       {items.length === 0 ? <p className="text-xs text-muted-foreground py-2">{t('editor.noMemory')}</p> : (
-        <ScrollArea className="max-h-[60vh]">
-          <div className="space-y-2 pr-1">
-            {items.map((m) => (
-              <div
-                key={m.id}
-                className="p-2 rounded-md bg-muted/40 text-xs group relative cursor-pointer hover:bg-secondary/15 transition-colors"
-                onClick={() => openEdit(m)}
-                data-testid={`item-memory-${m.id}`}
-              >
-                <div className="flex items-start justify-between gap-1">
-                  <div>
-                    <p className="font-medium text-foreground">{m.title}</p>
-                    <p className="text-muted-foreground capitalize text-[10px]">{t(`editor.memoryItem.type.${m.type}` as Parameters<typeof t>[0])} · {t(`editor.memoryItem.scope.${m.scope}` as Parameters<typeof t>[0])}</p>
-                    <p className="text-muted-foreground line-clamp-2">{m.content}</p>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="w-5 h-5 opacity-0 group-hover:opacity-100 shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
-                    onClick={(e) => remove(e, m.id)}
-                    data-testid={`button-delete-memory-${m.id}`}
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </Button>
+        <div className="space-y-2">
+          {items.map((m) => (
+            <div
+              key={m.id}
+              className="p-2 rounded-md bg-muted/40 text-xs group relative cursor-pointer hover:bg-secondary/15 transition-colors"
+              onClick={() => openEdit(m)}
+              data-testid={`item-memory-${m.id}`}
+            >
+              <div className="flex items-start justify-between gap-1">
+                <div>
+                  <p className="font-medium text-foreground">{m.title}</p>
+                  <p className="text-muted-foreground capitalize text-[10px]">{t(`editor.memoryItem.type.${m.type}` as Parameters<typeof t>[0])} · {t(`editor.memoryItem.scope.${m.scope}` as Parameters<typeof t>[0])}</p>
+                  <p className="text-muted-foreground line-clamp-2">{m.content}</p>
                 </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="w-5 h-5 opacity-0 group-hover:opacity-100 shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  onClick={(e) => remove(e, m.id)}
+                  data-testid={`button-delete-memory-${m.id}`}
+                >
+                  <Trash2 className="w-3 h-3" />
+                </Button>
               </div>
-            ))}
-          </div>
-        </ScrollArea>
+            </div>
+          ))}
+        </div>
       )}
       <Dialog open={editing !== null} onOpenChange={(o) => { if (!o) setEditing(null); }}>
         <DialogContent className="max-w-sm">
@@ -460,16 +458,18 @@ export function MemoryPanel({ projectId }: MemoryPanelProps) {
   const cls = (active: boolean) => `flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors ${active ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"}`;
 
   return (
-    <div data-testid="panel-memory">
-      <div className="flex flex-wrap gap-1 mb-3">
+    <div data-testid="panel-memory" className="flex flex-col h-full">
+      <div className="flex flex-wrap gap-1 mb-2 shrink-0">
         {tabs.map(({ key, label, icon }) => (
           <button key={key} className={cls(sub === key)} onClick={() => setSub(key)} data-testid={`subtab-${key}`}>{icon}{label}</button>
         ))}
       </div>
-      {sub === "characters" && <CharactersTab projectId={projectId} />}
-      {sub === "locations" && <LocationsTab projectId={projectId} />}
-      {sub === "worldRules" && <WorldRulesTab projectId={projectId} />}
-      {sub === "items" && <MemoryItemsTab projectId={projectId} />}
+      <div className="flex-1 min-h-0 overflow-y-auto pr-0.5">
+        {sub === "characters" && <CharactersTab projectId={projectId} />}
+        {sub === "locations" && <LocationsTab projectId={projectId} />}
+        {sub === "worldRules" && <WorldRulesTab projectId={projectId} />}
+        {sub === "items" && <MemoryItemsTab projectId={projectId} />}
+      </div>
     </div>
   );
 }
