@@ -226,7 +226,7 @@ function ChapterRow({
           }}
           title={chapter.title}
         >{chapter.title}</span>
-        <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5">
+        <div className="hidden group-hover:flex items-center gap-0.5">
           <button
             className="w-4 h-4 flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30"
             disabled={!canMoveUp}
@@ -293,7 +293,7 @@ function ChapterRow({
                     {(scene.wordCount ?? 0).toLocaleString()}
                   </span>
                 )}
-                <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5">
+                <div className="hidden group-hover:flex items-center gap-0.5">
                   <button
                     className="w-4 h-4 flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30"
                     disabled={!canUp}
@@ -495,7 +495,7 @@ function BookRow({
         </button>
         <BookOpen className="w-3.5 h-3.5 text-primary shrink-0" />
         <span className="flex-1 truncate font-medium text-xs">{book.title}</span>
-        <div className="opacity-0 group-hover:opacity-100">
+        <div className="hidden group-hover:block">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="w-5 h-5" onClick={(e) => e.stopPropagation()} data-testid={`button-book-menu-${book.id}`}>
