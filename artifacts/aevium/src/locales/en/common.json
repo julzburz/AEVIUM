@@ -189,6 +189,7 @@
   "editor.import.aiExtracting": "Extracting text...",
   "editor.import.aiAnalyzing": "Analyzing with AI...",
   "editor.import.scenes": "scenes",
+  "editor.import.adjustScenes": "Adjust scenes",
   "editor.import.chaptersLabel": "chapters",
   "editor.import.addMore": "Add more files",
   "editor.import.preview": "Proposed structure preview",

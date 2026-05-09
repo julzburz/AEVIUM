@@ -380,7 +380,7 @@ export function SceneEditor({ sceneId, chapterId, projectId, onWordCountChange, 
       {/* Metadata bar */}
       <div className="px-4 py-1.5 border-b bg-muted/5 flex flex-wrap items-center gap-x-2 gap-y-1 shrink-0">
         <Input
-          className="h-7 text-sm font-semibold border-0 bg-transparent p-0 focus-visible:ring-0 min-w-[120px] flex-1 max-w-[200px]"
+          className="h-7 text-sm font-semibold border-0 border-b border-border/50 bg-transparent px-1 focus-visible:ring-0 focus:border-primary min-w-[120px] flex-1 max-w-[240px] transition-colors rounded-none"
           value={sceneTitle}
           onChange={(e) => setSceneTitle(e.target.value)}
           onBlur={() => flush()}

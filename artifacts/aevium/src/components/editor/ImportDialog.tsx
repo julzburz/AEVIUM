@@ -16,7 +16,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { FileText, Upload, Loader2, CheckCircle2, XCircle, Sparkles } from "lucide-react";
+import { FileText, Upload, Loader2, CheckCircle2, XCircle, Sparkles, Plus, Minus } from "lucide-react";
 
 interface ParsedScene { title: string; content: string }
 interface ParsedChapter { title: string; scenes: ParsedScene[] }
@@ -26,7 +26,32 @@ interface FileEntry {
   file: File;
   status: FileStatus;
   chapter?: ParsedChapter;
+  originalText?: string;
   error?: string;
+}
+
+function resplitIntoN(entry: FileEntry, n: number): ParsedChapter {
+  const chapter = entry.chapter!;
+  const fullText = entry.originalText ?? chapter.scenes.map(s => s.content).join("\n\n");
+  const paragraphs = fullText.split(/\n{2,}/).map(p => p.trim()).filter(Boolean);
+
+  const count = Math.max(1, Math.min(n, paragraphs.length || 1));
+  const chunkSize = Math.ceil(paragraphs.length / count);
+  const newScenes: ParsedScene[] = [];
+
+  for (let i = 0; i < count; i++) {
+    const start = i * chunkSize;
+    const chunk = paragraphs.slice(start, start + chunkSize).join("\n\n");
+    if (chunk.trim()) {
+      newScenes.push({ title: chapter.scenes[i]?.title ?? `Escena ${i + 1}`, content: chunk });
+    }
+  }
+
+  if (newScenes.length === 0) {
+    newScenes.push({ title: chapter.scenes[0]?.title ?? "Escena 1", content: fullText });
+  }
+
+  return { ...chapter, scenes: newScenes };
 }
 
 interface ImportDialogProps {
@@ -132,7 +157,7 @@ export function ImportDialog({ projectId, bookId: initialBookId, open, onClose }
         setEntryStatus(i, { status: "analyzing" });
         const chapter = await analyzeWithAI(text, file.name, projectId);
 
-        setEntryStatus(i, { status: "done", chapter });
+        setEntryStatus(i, { status: "done", chapter, originalText: text });
       } catch (err) {
         setEntryStatus(i, { status: "error", error: String(err) });
       }
@@ -329,6 +354,33 @@ export function ImportDialog({ projectId, bookId: initialBookId, open, onClose }
                     {/* Scenes preview */}
                     {entry.status === "done" && entry.chapter && (
                       <div className="px-3 py-2 space-y-1">
+                        {/* Scene count adjuster */}
+                        <div className="flex items-center gap-2 mb-2 pb-2 border-b border-border/40">
+                          <span className="text-xs text-muted-foreground">{t('editor.import.adjustScenes')}:</span>
+                          <button
+                            className="w-5 h-5 flex items-center justify-center rounded border border-border/60 text-muted-foreground hover:bg-muted/50 hover:text-foreground disabled:opacity-30 transition-colors"
+                            disabled={entry.chapter.scenes.length <= 1}
+                            onClick={() => {
+                              const newChapter = resplitIntoN(entry, entry.chapter!.scenes.length - 1);
+                              setEntryStatus(i, { chapter: newChapter });
+                            }}
+                            data-testid={`btn-scenes-minus-${i}`}
+                          >
+                            <Minus className="w-3 h-3" />
+                          </button>
+                          <span className="text-sm font-semibold w-4 text-center">{entry.chapter.scenes.length}</span>
+                          <button
+                            className="w-5 h-5 flex items-center justify-center rounded border border-border/60 text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors"
+                            onClick={() => {
+                              const newChapter = resplitIntoN(entry, entry.chapter!.scenes.length + 1);
+                              setEntryStatus(i, { chapter: newChapter });
+                            }}
+                            data-testid={`btn-scenes-plus-${i}`}
+                          >
+                            <Plus className="w-3 h-3" />
+                          </button>
+                        </div>
+
                         {entry.chapter.scenes.map((sc, si) => (
                           <div key={si} className="flex items-center gap-2 text-xs text-muted-foreground" data-testid={`preview-scene-${i}-${si}`}>
                             <span className="w-1 h-1 rounded-full bg-muted-foreground/40 shrink-0" />
