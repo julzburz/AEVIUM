@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import mammoth from "mammoth";
 import { useI18n } from "@/lib/i18n";
 import { useCreateChapter, useCreateScene, useListBooks, getListChaptersQueryKey, getListScenesQueryKey, getListBooksQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -109,14 +110,35 @@ export function ImportDialog({ projectId, bookId: initialBookId, open, onClose }
 
   const effectiveBookId = selectedBookId ?? initialBookId ?? null;
 
-  const handleFile = (file: File) => {
+  const handleFile = async (file: File) => {
+    const ext = file.name.split(".").pop()?.toLowerCase();
+
+    if (ext === "doc") {
+      toast({ title: t('editor.import.docLegacy'), variant: "destructive" });
+      return;
+    }
+
     setFileName(file.name);
+
+    if (ext === "docx") {
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const result = await mammoth.extractRawText({ arrayBuffer });
+        const text = result.value;
+        setRawText(text);
+        setParsed(parseFile(text));
+      } catch {
+        toast({ title: t('editor.import.error'), variant: "destructive" });
+      }
+      return;
+    }
+
+    // .txt / .md — read as plain text
     const reader = new FileReader();
     reader.onload = (e) => {
       const text = (e.target?.result as string) ?? "";
       setRawText(text);
-      const result = parseFile(text);
-      setParsed(result);
+      setParsed(parseFile(text));
     };
     reader.readAsText(file, "utf-8");
   };
@@ -209,7 +231,7 @@ export function ImportDialog({ projectId, bookId: initialBookId, open, onClose }
             ref={fileRef}
             type="file"
             className="hidden"
-            accept=".txt,.md,.markdown"
+            accept=".docx,.doc,.txt,.md,.markdown"
             onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
             data-testid="input-import-file"
           />
