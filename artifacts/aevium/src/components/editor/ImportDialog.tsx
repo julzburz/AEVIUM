@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import mammoth from "mammoth";
 import { useI18n } from "@/lib/i18n";
 import {
-  useCreateChapter, useCreateScene, useListBooks,
+  useCreateChapter, useCreateScene, useCreateBook, useListBooks,
   getListChaptersQueryKey, getListScenesQueryKey, getListBooksQueryKey
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -83,8 +83,10 @@ export function ImportDialog({ projectId, bookId: initialBookId, open, onClose }
 
   const createChapter = useCreateChapter();
   const createScene = useCreateScene();
+  const createBook = useCreateBook();
 
-  const effectiveBookId = selectedBookId ?? initialBookId ?? null;
+  // Auto-select first available book if nothing explicitly chosen
+  const effectiveBookId = selectedBookId ?? initialBookId ?? books[0]?.id ?? null;
 
   const handleReset = () => {
     setEntries([]);
@@ -150,21 +152,34 @@ export function ImportDialog({ projectId, bookId: initialBookId, open, onClose }
   };
 
   const handleImport = async () => {
-    if (!effectiveBookId) return;
     const ready = entries.filter((e) => e.status === "done" && e.chapter);
     if (ready.length === 0) return;
 
     setImporting(true);
     try {
+      // If no book exists yet, auto-create one using the first chapter title
+      let targetBookId = effectiveBookId;
+      if (!targetBookId) {
+        const firstTitle = ready[0]?.chapter?.title ?? "Libro 1";
+        const newBook = await new Promise<{ id: number }>((resolve, reject) => {
+          createBook.mutate(
+            { projectId, data: { title: firstTitle } },
+            { onSuccess: resolve, onError: reject }
+          );
+        });
+        await queryClient.invalidateQueries({ queryKey: getListBooksQueryKey(projectId) });
+        targetBookId = newBook.id;
+      }
+
       for (const entry of ready) {
         const ch = entry.chapter!;
         const newChapter = await new Promise<{ id: number }>((resolve, reject) => {
           createChapter.mutate(
-            { bookId: effectiveBookId, data: { title: ch.title } },
+            { bookId: targetBookId!, data: { title: ch.title } },
             { onSuccess: resolve, onError: reject }
           );
         });
-        await queryClient.invalidateQueries({ queryKey: getListChaptersQueryKey(effectiveBookId) });
+        await queryClient.invalidateQueries({ queryKey: getListChaptersQueryKey(targetBookId!) });
 
         for (const scene of ch.scenes) {
           await new Promise<void>((resolve, reject) => {
@@ -357,7 +372,7 @@ export function ImportDialog({ projectId, bookId: initialBookId, open, onClose }
           <Button variant="outline" onClick={handleClose}>{t('form.cancel')}</Button>
           <Button
             onClick={handleImport}
-            disabled={!allDone || importing || !effectiveBookId || doneCount === 0}
+            disabled={!allDone || importing || doneCount === 0}
             data-testid="button-confirm-import"
           >
             {importing ? t('editor.import.importing') : t('editor.import.confirm')}
