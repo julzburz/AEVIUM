@@ -1289,7 +1289,7 @@ paths:
     post:
       operationId: aiTestBuiltin
       tags: [ai]
-      summary: Test the built-in Replit-managed Gemini connection
+      summary: Test the Google Gemini API connection
       responses:
         "200":
           description: Test result
@@ -2231,7 +2231,7 @@ components:
           type: ["integer", "null"]
         provider:
           type: string
-          enum: [openai, anthropic, gemini, mistral, replit]
+          enum: [openai, anthropic, gemini, mistral]
         model:
           type: ["string", "null"]
         isDefault:
@@ -2248,7 +2248,7 @@ components:
       properties:
         provider:
           type: string
-          enum: [openai, anthropic, gemini, mistral, replit]
+          enum: [openai, anthropic, gemini, mistral]
         model:
           type: ["string", "null"]
         secret:
@@ -2262,7 +2262,7 @@ components:
       properties:
         provider:
           type: string
-          enum: [openai, anthropic, gemini, mistral, replit]
+          enum: [openai, anthropic, gemini, mistral]
         secret:
           type: ["string", "null"]
       required: [provider]

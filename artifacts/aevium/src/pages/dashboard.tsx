@@ -103,8 +103,8 @@ export default function Dashboard() {
         setNewProjectName("");
         setLocation(`/projects/${project.id}`);
       },
-      onError: () => {
-        toast({ title: t('dashboard.form.title'), variant: "destructive" });
+      onError: (error: Error) => {
+        toast({ title: t('dashboard.form.title'), description: error.message || "No se pudo conectar con el servidor.", variant: "destructive" });
       }
     });
   };

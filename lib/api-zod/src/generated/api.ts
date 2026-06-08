@@ -1124,7 +1124,7 @@ export const ListAiCredentialsParams = zod.object({
 export const ListAiCredentialsResponseItem = zod.object({
   id: zod.number(),
   projectId: zod.number().nullish(),
-  provider: zod.enum(["openai", "anthropic", "gemini", "mistral", "replit"]),
+  provider: zod.enum(["openai", "anthropic", "gemini", "mistral"]),
   model: zod.string().nullish(),
   isDefault: zod.boolean(),
   hasSecret: zod.boolean(),
@@ -1142,7 +1142,7 @@ export const CreateAiCredentialParams = zod.object({
 });
 
 export const CreateAiCredentialBody = zod.object({
-  provider: zod.enum(["openai", "anthropic", "gemini", "mistral", "replit"]),
+  provider: zod.enum(["openai", "anthropic", "gemini", "mistral"]),
   model: zod.string().nullish(),
   secret: zod.string().nullish(),
   isDefault: zod.boolean().optional(),
@@ -1164,7 +1164,7 @@ export const TestAiCredentialParams = zod.object({
 });
 
 export const TestAiCredentialBody = zod.object({
-  provider: zod.enum(["openai", "anthropic", "gemini", "mistral", "replit"]),
+  provider: zod.enum(["openai", "anthropic", "gemini", "mistral"]),
   secret: zod.string().nullish(),
 });
 
@@ -1296,7 +1296,7 @@ export const AiContextSummaryResponse = zod.object({
 });
 
 /**
- * @summary Test the built-in Replit-managed Gemini connection
+ * @summary Test the Google Gemini API connection
  */
 export const AiTestBuiltinResponse = zod.object({
   ok: zod.boolean(),

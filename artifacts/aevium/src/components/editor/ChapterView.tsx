@@ -65,10 +65,7 @@ export function ChapterView({ chapterId, chapterTitle, onWordCountChange }: Chap
             {scenes.map((scene, idx) => (
               <div key={scene.id} data-testid={`chapter-scene-${scene.id}`}>
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-mono text-muted-foreground/60">{String(idx + 1).padStart(2, "0")}</span>
-                    <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-widest">{scene.title}</h2>
-                  </div>
+                  <span className="text-xs font-mono text-muted-foreground/60">{String(idx + 1).padStart(2, "0")}</span>
                   <div className="flex-1 h-px bg-border" />
                   <span className="text-xs text-muted-foreground/60">{countWords(scene.content ?? "").toLocaleString()} {t('editor.words')}</span>
                 </div>
@@ -76,13 +73,6 @@ export function ChapterView({ chapterId, chapterTitle, onWordCountChange }: Chap
                   className="font-serif text-base leading-relaxed text-foreground prose dark:prose-invert max-w-none text-justify hyphens-auto"
                   dangerouslySetInnerHTML={{ __html: safeHtml(scene.content ?? "") }}
                 />
-                {idx < scenes.length - 1 && (
-                  <div className="mt-8 flex items-center gap-4 text-muted-foreground/30">
-                    <Separator className="flex-1" />
-                    <span className="text-lg tracking-[0.5em]">* * *</span>
-                    <Separator className="flex-1" />
-                  </div>
-                )}
               </div>
             ))}
           </div>

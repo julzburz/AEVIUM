@@ -4,6 +4,7 @@ import {
   useUpdateScene,
   useListCharacters, getListCharactersQueryKey,
   useListLocations, getListLocationsQueryKey,
+  getListScenesQueryKey,
 } from "@workspace/api-client-react";
 import { useI18n } from "@/lib/i18n";
 import { useQueryClient } from "@tanstack/react-query";
@@ -228,6 +229,7 @@ export function SceneEditor({ sceneId, chapterId, projectId, onWordCountChange, 
             }
             updateSaveStatus("saved");
             queryClient.invalidateQueries({ queryKey: getGetSceneQueryKey(forChapterId, forSceneId) });
+            queryClient.invalidateQueries({ queryKey: getListScenesQueryKey(forChapterId) });
             setTimeout(() => updateSaveStatus("idle"), 2000);
           },
           onError: () => updateSaveStatus("idle"),
@@ -356,6 +358,7 @@ export function SceneEditor({ sceneId, chapterId, projectId, onWordCountChange, 
         onSuccess: () => {
           updateSaveStatus("saved");
           queryClient.invalidateQueries({ queryKey: getGetSceneQueryKey(forChapterId, forSceneId) });
+          queryClient.invalidateQueries({ queryKey: getListScenesQueryKey(forChapterId) });
           setTimeout(() => updateSaveStatus("idle"), 2000);
         },
         onError: () => updateSaveStatus("idle"),

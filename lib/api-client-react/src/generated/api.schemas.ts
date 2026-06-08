@@ -908,7 +908,6 @@ export const AiCredentialProvider = {
   anthropic: "anthropic",
   gemini: "gemini",
   mistral: "mistral",
-  replit: "replit",
 } as const;
 
 export interface AiCredential {
@@ -931,7 +930,6 @@ export const CreateAiCredentialBodyProvider = {
   anthropic: "anthropic",
   gemini: "gemini",
   mistral: "mistral",
-  replit: "replit",
 } as const;
 
 export interface CreateAiCredentialBody {
@@ -951,7 +949,6 @@ export const TestAiCredentialBodyProvider = {
   anthropic: "anthropic",
   gemini: "gemini",
   mistral: "mistral",
-  replit: "replit",
 } as const;
 
 export interface TestAiCredentialBody {

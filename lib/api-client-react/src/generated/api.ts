@@ -4995,7 +4995,7 @@ export const useAiContextSummary = <
 };
 
 /**
- * @summary Test the built-in Replit-managed Gemini connection
+ * @summary Test the Google Gemini API connection
  */
 export const getAiTestBuiltinUrl = () => {
   return `/api/ai/test-builtin`;
@@ -5053,7 +5053,7 @@ export type AiTestBuiltinMutationResult = NonNullable<
 export type AiTestBuiltinMutationError = ErrorType<unknown>;
 
 /**
- * @summary Test the built-in Replit-managed Gemini connection
+ * @summary Test the Google Gemini API connection
  */
 export const useAiTestBuiltin = <
   TError = ErrorType<unknown>,
