@@ -18,14 +18,14 @@ const ProjectParams = z.object({ projectId: z.coerce.number() });
 const CredentialIdParams = z.object({ projectId: z.coerce.number(), id: z.coerce.number() });
 
 const CreateCredentialBody = z.object({
-  provider: z.enum(["openai", "anthropic", "gemini", "mistral", "replit"]),
+  provider: z.enum(["openai", "anthropic", "gemini", "mistral"]),
   model: z.string().nullish(),
   secret: z.string().min(1, "API key is required"),
   isDefault: z.boolean().optional(),
 });
 
 const TestCredentialBody = z.object({
-  provider: z.enum(["openai", "anthropic", "gemini", "mistral", "replit"]),
+  provider: z.enum(["openai", "anthropic", "gemini", "mistral"]),
   secret: z.string().nullish(),
   credentialId: z.coerce.number().optional(),
 });
@@ -50,7 +50,7 @@ function formatCredential(c: typeof aiCredentialsTable.$inferSelect) {
   };
 }
 
-function buildProvider(provider: SupportedProvider | "replit", apiKey: string, model?: string) {
+function buildProvider(provider: SupportedProvider, apiKey: string, model?: string) {
   if (provider === "openai") return createOpenAIProvider(apiKey, model);
   if (provider === "anthropic") return createAnthropicProvider(apiKey, model);
   return createCustomGeminiProvider(apiKey, model);
@@ -87,13 +87,12 @@ router.post("/projects/:projectId/ai-credentials", requireAuth, async (req, res)
       .where(and(eq(aiCredentialsTable.userId, userId), eq(aiCredentialsTable.projectId, params.data.projectId)));
   }
 
-  const providerValue = body.data.provider === "replit" ? "gemini" : body.data.provider;
   const [cred] = await db
     .insert(aiCredentialsTable)
     .values({
       userId,
       projectId: params.data.projectId,
-      provider: providerValue as "openai" | "anthropic" | "gemini" | "mistral",
+      provider: body.data.provider,
       model: body.data.model ?? null,
       encryptedSecret,
       isDefault: body.data.isDefault ?? false,
@@ -238,13 +237,12 @@ router.post("/ai-credentials", requireAuth, async (req, res): Promise<void> => {
       .where(and(eq(aiCredentialsTable.userId, userId), isNull(aiCredentialsTable.projectId)));
   }
 
-  const providerValue = body.data.provider === "replit" ? "gemini" : body.data.provider;
   const [cred] = await db
     .insert(aiCredentialsTable)
     .values({
       userId,
       projectId: null,
-      provider: providerValue as "openai" | "anthropic" | "gemini" | "mistral",
+      provider: body.data.provider,
       model: body.data.model ?? null,
       encryptedSecret,
       isDefault: body.data.isDefault ?? false,
